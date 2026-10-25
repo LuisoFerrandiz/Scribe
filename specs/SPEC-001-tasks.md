@@ -3,11 +3,11 @@
 Commit por bloque, solo con orden del dueño. Cada archivo copiado del old se anota en `DECISIONS.md`.
 
 - [x] T0 Init: `.gitignore`, `CLAUDE.md`, `DECISIONS.md` (D-001), `.env.example`.
-- [ ] T1 Copiar la lista "tal cual" del plan y `constitution.md` recortado (límites y seguridad
+- [x] T1 Copiar la lista "tal cual" del plan y `constitution.md` recortado (límites y seguridad
       vigentes, renumerados); `npm install` y build limpios.
-- [ ] T2 Esquema recortado (sin jury, case_link, citas, `boat`, `person`) y modelo nuevo
+- [x] T2 Esquema recortado (sin jury, case_link, citas, `boat`, `person`) y modelo nuevo
       (`event`, `protest_case`, `party`, `witness`); `migrate` limpio en BD vacía.
-- [ ] T3 Recortar `rules` a la búsqueda por texto; reescribir `server.ts` y `routes/index.ts` sin las
+- [x] T3 Recortar `rules` a la búsqueda por texto; reescribir `server.ts` y `routes/index.ts` sin las
       rutas descartadas; sembrar frases y cargar RRS; comprobar que las FTS responden.
 - [ ] T4 Rutas de eventos, casos, partes, testigos y documento (`PATCH /cases/:id/doc` con 409).
 - [ ] T5 `GET /suggest` y `GET /search` con los umbrales de RF-005 y RF-006.

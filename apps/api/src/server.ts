@@ -1,0 +1,35 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
+import cookie from '@fastify/cookie';
+import { config } from './config.js';
+import { registerRoutes } from './routes/index.js';
+import { registerAuthGuard } from './auth/guard.js';
+
+const app = Fastify({ logger: true });
+
+// This server exists so the model API key never reaches the browser.
+// credentials: true (plus origin echoed, not '*') so the session cookie
+// survives the web app and API being on different ports/origins.
+await app.register(cors, { origin: true, credentials: true });
+
+// @fastify/cookie only parses/sets cookies; the session itself is a signed value
+// (src/auth/session.ts). Not @fastify/secure-session: its native dependency does not
+// match this image's musl libc and crash-looped the container.
+await app.register(cookie);
+
+registerAuthGuard(app);
+
+// Rule and protest-form uploads: 50MB covers a full RRS PDF; scanned PDFs are out of scope (no OCR).
+await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
+
+app.get('/health', () => ({ status: 'ok' }));
+
+registerRoutes(app);
+
+app.listen({ host: config.host, port: config.port }, (err) => {
+  if (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+});
