@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Environment
+.env
+
+# Data (runtime content, not source)
+data/db/
+data/case_attachments/
+
+# Syncthing conflict files
+*.sync-conflict-*
+
+# graphify output
+graphify-out/
+
+# OS
+.DS_Store
+Thumbs.db
