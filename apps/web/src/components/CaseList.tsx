@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AuthError, api, serverError } from '../api';
 import { go } from '../App';
+import { raceLabel } from '../docFormat';
 import { clearCaseLocal } from '../draftStore';
 import { ConfirmButton } from './ConfirmButton';
 import type { CaseSummary, SessionUser } from '../types';
@@ -57,6 +58,7 @@ export function CaseList({
       {cases && cases.length > 0 && (
         <div className="cases-head" aria-hidden="true">
           <span>Case</span>
+          <span>Race</span>
           <span>Event</span>
           <span>Type</span>
           <span>Hearing</span>
@@ -67,6 +69,7 @@ export function CaseList({
           <li key={c.id}>
             <a href={`#/case/${c.id}`}>
               <strong>{c.case_number}</strong>
+              <span>{raceLabel(c.race ?? '')}</span>
               <span>{c.event_name}</span>
               <span className="muted">{c.kinds.split(',').map((k) => KIND_LABEL[k] ?? k).join(' + ')}</span>
               <span className="muted">{c.hearing_at ? c.hearing_at.replace('T', ' ') : ''}</span>

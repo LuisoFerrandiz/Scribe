@@ -5,6 +5,12 @@ import cookie from '@fastify/cookie';
 import { config } from './config.js';
 import { registerRoutes } from './routes/index.js';
 import { registerAuthGuard } from './auth/guard.js';
+import path from 'node:path';
+import { ensureColumns } from './db/columns.js';
+import { db } from './db/connection.js';
+
+// A database made before a column existed gets it now, on the same connection the API uses.
+ensureColumns(db, path.join(config.dataDir, 'db'));
 
 const app = Fastify({ logger: true });
 

@@ -2,6 +2,7 @@
 // never writes to the case and never fills a document section.
 export interface Extraction {
   case_number: string;
+  race: string; // as the form writes it; several distinct races comma separated; empty if none
   claim_types: ('protest' | 'redress' | 'reopening')[];
   parties: { role: 'protestor' | 'respondent' | 'other'; name: string; boat_name: string; sail_number: string }[];
 }
@@ -17,6 +18,14 @@ export class ExtractError extends Error {
 }
 
 const MAX_PARTIES = 200;
+const MAX_RACE = 40;
+
+// "5, 5, 5" -> "5": each distinct race once, in the order seen, and never longer than the case field.
+export function cleanRaces(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  const seen = [...new Set(v.split(',').map((r) => r.trim()).filter(Boolean))];
+  return seen.join(', ').slice(0, MAX_RACE).trim();
+}
 
 function parseJson(text: string): unknown {
   const unfenced = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -47,6 +56,7 @@ export function normalize(text: string): Extraction {
   const parties = Array.isArray(obj.parties) ? obj.parties : [];
   return {
     case_number: str(obj.case_number),
+    race: cleanRaces(obj.race),
     claim_types: KINDS.filter((k) => kinds.includes(k)),
     parties: parties
       .flatMap((p) => {

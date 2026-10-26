@@ -105,6 +105,40 @@ describe('cases', () => {
   });
 });
 
+describe('race number', () => {
+  it('is empty by default, can be set when the case is created, and is in the list', async () => {
+    const plain = (await newCase('r0')).json();
+    expect(plain.race).toBe('');
+    const res = await app.inject({
+      method: 'POST',
+      url: '/cases',
+      payload: { event_id: eventId, case_number: 'r1', race: ' 5 ', kinds: ['protest'] },
+    });
+    expect(res.json().race).toBe('5');
+    const list = (await app.inject({ url: '/cases' })).json() as { case_number: string; race: string }[];
+    expect(list.find((c) => c.case_number === 'r1')?.race).toBe('5');
+  });
+
+  it('is edited with PATCH, kept when PATCH does not send it, and cleared with an empty text', async () => {
+    const c = (await newCase('r2')).json();
+    const set = await app.inject({ method: 'PATCH', url: `/cases/${c.id}`, payload: { race: 'Race 3' } });
+    expect(set.json().race).toBe('Race 3');
+    const other = await app.inject({ method: 'PATCH', url: `/cases/${c.id}`, payload: { kinds: ['redress'] } });
+    expect(other.json().race).toBe('Race 3');
+    const cleared = await app.inject({ method: 'PATCH', url: `/cases/${c.id}`, payload: { race: '' } });
+    expect(cleared.json().race).toBe('');
+  });
+
+  it('refuses a race that is not text or is too long, and does not change the case', async () => {
+    const c = (await newCase('r3')).json();
+    const long = await app.inject({ method: 'PATCH', url: `/cases/${c.id}`, payload: { race: 'x'.repeat(41) } });
+    expect(long.statusCode).toBe(400);
+    const notText = await app.inject({ method: 'PATCH', url: `/cases/${c.id}`, payload: { race: 5 } });
+    expect(notText.statusCode).toBe(400);
+    expect((await app.inject({ url: `/cases/${c.id}` })).json().race).toBe('');
+  });
+});
+
 describe('deleting a case', () => {
   it('removes the case, its people and its attached files', async () => {
     const c = (await newCase('del')).json();

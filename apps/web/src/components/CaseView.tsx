@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { copyText, fullText } from '../docFormat';
+import { copyText, fullText, raceLabel } from '../docFormat';
 import { readRailCollapsed, writeRailCollapsed } from '../draftStore';
 import { ReadingView } from './ReadingView';
 import { CaseDataPanel } from './CaseDataPanel';
@@ -110,6 +110,12 @@ function CaseRail({
       <p className="rail-meta">
         {c.event_name}
         <br />
+        {raceLabel(c.race ?? '') && (
+          <>
+            <strong>{raceLabel(c.race ?? '')}</strong>
+            <br />
+          </>
+        )}
         {kinds}
         {c.hearing_at ? `, ${c.hearing_at.replace('T', ' ')}` : ''}
       </p>

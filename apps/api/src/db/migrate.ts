@@ -4,6 +4,8 @@ import { db } from './connection.js';
 import { seedBasePhrases } from './seedPhrases.js';
 import { seedAdminUser } from './seedAdmin.js';
 import { seedRrs } from './seedRrs.js';
+import { ensureColumns } from './columns.js';
+import { config } from '../config.js';
 import { indexPendingSections, reindexIfParserChanged } from '../resources/sectionIndex.js';
 
 // Runs on every container start, so every step is idempotent. The schema is the
@@ -11,6 +13,7 @@ import { indexPendingSections, reindexIfParserChanged } from '../resources/secti
 const schemaPath = path.join(import.meta.dirname, '..', '..', 'db', 'schema.sql');
 db.exec(readFileSync(schemaPath, 'utf-8'));
 console.log('Schema applied:', schemaPath);
+ensureColumns(db, path.join(config.dataDir, 'db'));
 
 await seedRrs();
 await indexPendingSections();

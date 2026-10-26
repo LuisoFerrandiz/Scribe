@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS protest_case (
   id INTEGER PRIMARY KEY,
   event_id INTEGER NOT NULL REFERENCES event(id) ON DELETE CASCADE,
   case_number TEXT NOT NULL,
+  race TEXT NOT NULL DEFAULT '', -- race number as the protest form writes it ("5"); optional
   kinds TEXT NOT NULL DEFAULT 'protest',
   hearing_at TEXT,
 

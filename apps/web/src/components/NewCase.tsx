@@ -21,6 +21,7 @@ export function NewCase({ onAuthLost }: { onAuthLost: () => void }) {
   const [eventName, setEventName] = useState('');
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [caseNumber, setCaseNumber] = useState('');
+  const [race, setRace] = useState('');
   const [kinds, setKinds] = useState<Kind[]>(['protest']);
   const [hearingAt, setHearingAt] = useState(nowLocal);
   const [parties, setParties] = useState<PartyDraft[]>([emptyParty('protestor'), emptyParty('respondent')]);
@@ -60,6 +61,7 @@ export function NewCase({ onAuthLost }: { onAuthLost: () => void }) {
       const created = await api.createCase({
         event_id,
         case_number: caseNumber.trim(),
+        race: race.trim(),
         kinds,
         hearing_at: hearingAt || null,
         parties,
@@ -120,6 +122,7 @@ export function NewCase({ onAuthLost }: { onAuthLost: () => void }) {
               value={caseNumber}
               onChange={(e) => setCaseNumber(e.target.value)}
             />
+            <input className="narrow" placeholder="Race" aria-label="Race" value={race} onChange={(e) => setRace(e.target.value)} />
             <input type="datetime-local" value={hearingAt} onChange={(e) => setHearingAt(e.target.value)} />
           </div>
           <div className="row">

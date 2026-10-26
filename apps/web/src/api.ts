@@ -98,7 +98,7 @@ export const api = {
   search: (q: string, caseId: number, signal: AbortSignal) =>
     request<SearchResponse>(`/search?${new URLSearchParams({ q, case_id: String(caseId) })}`, { signal }),
   createCase: (data: NewCaseInput) => send<CaseFull>('POST', '/cases', data),
-  patchCase: (caseId: number, data: { case_number?: string; kinds?: Kind[]; hearing_at?: string | null }) =>
+  patchCase: (caseId: number, data: { case_number?: string; race?: string; kinds?: Kind[]; hearing_at?: string | null }) =>
     send<CaseFull>('PATCH', `/cases/${caseId}`, data),
   setParties: (caseId: number, parties: Omit<PartyRow, 'id'>[] | (Omit<PartyRow, 'id'> & { id?: number })[]) =>
     send<PartyRow[]>('PUT', `/cases/${caseId}/parties`, { parties }),

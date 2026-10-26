@@ -200,7 +200,7 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
   // Case data changed outside the document (accepted protest form): only these fields are merged,
   // so the text and its save stamp are never touched.
   const updateCase = useCallback(
-    (patch: Pick<Partial<CaseFull>, 'case_number' | 'kinds' | 'hearing_at' | 'parties' | 'witnesses'>) =>
+    (patch: Pick<Partial<CaseFull>, 'case_number' | 'race' | 'kinds' | 'hearing_at' | 'parties' | 'witnesses'>) =>
       setData((prev) => {
         if (!prev) return prev;
         const next = { ...prev, ...patch };

@@ -32,9 +32,9 @@ input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); 
 .login label { display: grid; gap: 4px; }
 .cases { list-style: none; padding: 0; margin: 0; }
 .cases li { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
-.cases a { flex: 0 1 58rem; display: grid; grid-template-columns: 7rem minmax(10rem, 18rem) 14rem 12rem; gap: 16px; padding: 12px 8px; text-decoration: none; color: inherit; }
+.cases a { flex: 0 1 64rem; display: grid; grid-template-columns: 7rem 6rem minmax(10rem, 18rem) 14rem 12rem; gap: 16px; padding: 12px 8px; text-decoration: none; color: inherit; }
 .cases a:hover { background: var(--rail); }
-.cases-head { max-width: 58rem; display: grid; grid-template-columns: 7rem minmax(10rem, 18rem) 14rem 12rem; gap: 16px; padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.cases-head { max-width: 64rem; display: grid; grid-template-columns: 7rem 6rem minmax(10rem, 18rem) 14rem 12rem; gap: 16px; padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .newcase { display: grid; gap: 16px; }
 fieldset { border: 1px solid var(--line); border-radius: 6px; display: grid; gap: 8px; padding: 12px; }
 legend { font-weight: 600; padding: 0 6px; }
@@ -180,3 +180,6 @@ button.rail-toggle:hover { background: rgba(20, 41, 61, 0.08); }
 @media (max-width: 900px) {
   .rail:not(.collapsed) .rail-people { flex: none; max-height: 9rem; }
 }
+
+.row > input.narrow { flex: 0 0 7rem; }
+.rail-meta strong { color: var(--fg); }

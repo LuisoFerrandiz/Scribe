@@ -6,7 +6,7 @@ import type { AttachmentRow, CaseFull, Extraction, Kind } from '../types';
 const KIND_LABEL: Record<Kind, string> = { protest: 'Protest', redress: 'Redress', reopening: 'Reopening' };
 const ROLE_LABEL = { protestor: 'Protestor', respondent: 'Respondent', other: 'Party' } as const;
 
-type Update = Pick<Partial<CaseFull>, 'case_number' | 'kinds' | 'parties'>;
+type Update = Pick<Partial<CaseFull>, 'case_number' | 'race' | 'kinds' | 'parties'>;
 
 // RF-002: upload the protest form(s), ask for a proposal, and apply only what the scribe ticks.
 // The proposal never touches the document text; with no AI configured the case is filled by hand.
@@ -25,7 +25,7 @@ export function ProtestFormDialog({
   const [busy, setBusy] = useState<'upload' | 'read' | 'apply' | null>(null);
   const [error, setError] = useState('');
   const [proposal, setProposal] = useState<Extraction | null>(null);
-  const [take, setTake] = useState({ number: true, kinds: true, parties: true });
+  const [take, setTake] = useState({ number: true, race: true, kinds: true, parties: true });
   const input = useRef<HTMLInputElement>(null);
 
   function fail(e: unknown) {
@@ -70,7 +70,7 @@ export function ProtestFormDialog({
     try {
       const p = await api.extract(c.id);
       setProposal(p);
-      setTake({ number: true, kinds: true, parties: true });
+      setTake({ number: true, race: true, kinds: true, parties: true });
     } catch (e) {
       fail(e);
     } finally {
@@ -81,9 +81,10 @@ export function ProtestFormDialog({
   const fresh = proposal ? newParties(c.parties, proposal.parties) : [];
   const partyChanges = fresh.length > 0;
   const numberChanges = !!proposal?.case_number && proposal.case_number !== c.case_number;
+  const raceChanges = !!proposal?.race && proposal.race !== c.race;
   const kindsText = proposal?.claim_types.join(',') ?? '';
   const kindsChange = !!kindsText && kindsText !== c.kinds;
-  const nothingNew = !!proposal && !numberChanges && !kindsChange && !partyChanges;
+  const nothingNew = !!proposal && !numberChanges && !raceChanges && !kindsChange && !partyChanges;
 
   async function apply() {
     if (!proposal) return;
@@ -91,12 +92,14 @@ export function ProtestFormDialog({
     setError('');
     const patch: Update = {};
     try {
-      const body: { case_number?: string; kinds?: Kind[] } = {};
+      const body: { case_number?: string; race?: string; kinds?: Kind[] } = {};
       if (numberChanges && take.number) body.case_number = proposal.case_number;
+      if (raceChanges && take.race) body.race = proposal.race;
       if (kindsChange && take.kinds) body.kinds = proposal.claim_types;
-      if (body.case_number !== undefined || body.kinds) {
+      if (body.case_number !== undefined || body.race !== undefined || body.kinds) {
         const updated = await api.patchCase(c.id, body);
         patch.case_number = updated.case_number;
+        patch.race = updated.race;
         patch.kinds = updated.kinds;
       }
       if (partyChanges && take.parties) {
@@ -162,6 +165,12 @@ export function ProtestFormDialog({
               <label>
                 <input type="checkbox" checked={take.number} onChange={(e) => setTake({ ...take, number: e.target.checked })} />
                 Case number: <strong>{proposal.case_number}</strong> (now {c.case_number})
+              </label>
+            )}
+            {raceChanges && (
+              <label>
+                <input type="checkbox" checked={take.race} onChange={(e) => setTake({ ...take, race: e.target.checked })} />
+                Race: <strong>{proposal.race}</strong> (now {c.race || 'empty'})
               </label>
             )}
             {kindsChange && (

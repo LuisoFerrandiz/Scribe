@@ -15,6 +15,7 @@ interface CaseRow {
   id: number;
   event_id: number;
   case_number: string;
+  race: string;
   kinds: string;
   hearing_at: string | null;
   updated_at: string;
@@ -75,7 +76,7 @@ function docOf(caseId: number) {
 function fullCase(caseId: number) {
   const row = db
     .prepare(
-      `SELECT c.id, c.event_id, c.case_number, c.kinds, c.hearing_at, c.procedural, c.facts, c.conclusion,
+      `SELECT c.id, c.event_id, c.case_number, c.race, c.kinds, c.hearing_at, c.procedural, c.facts, c.conclusion,
               c.rules_text, c.decision, c.updated_at, e.name AS event_name, e.timezone AS event_timezone
        FROM protest_case c JOIN event e ON e.id = c.event_id WHERE c.id = ?`,
     )
@@ -83,12 +84,22 @@ function fullCase(caseId: number) {
   return { ...row, parties: partiesOf(caseId), witnesses: witnessesOf(caseId) };
 }
 
+const MAX_RACE = 40;
+// The race as the protest form writes it ("5", "Race 3", "5, 6"). Optional: empty is fine. A value
+// that is not text, or too long, is refused (null) instead of being cut.
+function cleanRace(v: unknown): string | null {
+  if (v === undefined || v === null) return '';
+  if (typeof v !== 'string') return null;
+  const race = v.trim();
+  return race.length <= MAX_RACE ? race : null;
+}
+
 export function registerCaseRoutes(app: FastifyInstance) {
   app.get('/cases', (req) => {
     const { event_id } = req.query as { event_id?: string };
     return db
       .prepare(
-        `SELECT c.id, c.event_id, c.case_number, c.kinds, c.hearing_at, c.updated_at, e.name AS event_name
+        `SELECT c.id, c.event_id, c.case_number, c.race, c.kinds, c.hearing_at, c.updated_at, e.name AS event_name
          FROM protest_case c JOIN event e ON e.id = c.event_id
          WHERE (? IS NULL OR c.event_id = ?)
          ORDER BY c.updated_at DESC`,
@@ -100,15 +111,18 @@ export function registerCaseRoutes(app: FastifyInstance) {
     const body = (req.body ?? {}) as {
       event_id?: number;
       case_number?: string;
+      race?: unknown;
       kinds?: unknown;
       hearing_at?: string | null;
       parties?: PartyInput[];
     };
     const caseNumber = body.case_number?.trim();
+    const race = cleanRace(body.race);
     const kinds = body.kinds === undefined ? 'protest' : parseKinds(body.kinds);
     const parties = body.parties ?? [];
     if (!body.event_id || !caseNumber) return reply.code(400).send({ error: 'event_id and case_number are required' });
     if (!kinds) return reply.code(400).send({ error: 'invalid kinds' });
+    if (race === null) return reply.code(400).send({ error: `race must be text of at most ${MAX_RACE} characters` });
     if (!Array.isArray(parties) || parties.length > MAX_PEOPLE || !validParties(parties)) {
       return reply.code(400).send({ error: 'invalid parties' });
     }
@@ -121,8 +135,8 @@ export function registerCaseRoutes(app: FastifyInstance) {
 
     const id = inTransaction(() => {
       const result = db
-        .prepare('INSERT INTO protest_case (event_id, case_number, kinds, hearing_at) VALUES (?, ?, ?, ?)')
-        .run(body.event_id!, caseNumber, kinds, body.hearing_at || null);
+        .prepare('INSERT INTO protest_case (event_id, case_number, race, kinds, hearing_at) VALUES (?, ?, ?, ?, ?)')
+        .run(body.event_id!, caseNumber, race, kinds, body.hearing_at || null);
       const caseId = Number(result.lastInsertRowid);
       parties.forEach((p, i) => insertParty(caseId, p, i));
       return caseId;
@@ -140,20 +154,23 @@ export function registerCaseRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const row = caseById(id);
     if (!row) return reply.code(404).send({ error: 'not found' });
-    const body = (req.body ?? {}) as { case_number?: string; kinds?: unknown; hearing_at?: string | null };
+    const body = (req.body ?? {}) as { case_number?: string; race?: unknown; kinds?: unknown; hearing_at?: string | null };
 
     const caseNumber = body.case_number === undefined ? row.case_number : body.case_number.trim();
     const kinds = body.kinds === undefined ? row.kinds : parseKinds(body.kinds);
     if (!caseNumber) return reply.code(400).send({ error: 'case_number cannot be empty' });
     if (!kinds) return reply.code(400).send({ error: 'invalid kinds' });
+    const race = body.race === undefined ? row.race : cleanRace(body.race);
+    if (race === null) return reply.code(400).send({ error: `race must be text of at most ${MAX_RACE} characters` });
     const clash = db
       .prepare('SELECT 1 FROM protest_case WHERE event_id = ? AND case_number = ? AND id <> ?')
       .get(row.event_id, caseNumber, row.id);
     if (clash) return reply.code(409).send({ error: 'case number already exists in this event' });
 
     const hearingAt = body.hearing_at === undefined ? row.hearing_at : body.hearing_at || null;
-    db.prepare('UPDATE protest_case SET case_number = ?, kinds = ?, hearing_at = ? WHERE id = ?').run(
+    db.prepare('UPDATE protest_case SET case_number = ?, race = ?, kinds = ?, hearing_at = ? WHERE id = ?').run(
       caseNumber,
+      race,
       kinds,
       hearingAt,
       row.id,

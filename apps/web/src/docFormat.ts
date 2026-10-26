@@ -19,11 +19,18 @@ export function partiesBlock(c: CaseFull): string {
   return c.parties.map(partyLine).join('\n');
 }
 
-// "Case 7 - Test Cup" and "Protest + Redress - 2026-10-25 18:30".
+// "5" -> "Race 5"; a race the form wrote with its own words ("Race 3", "R3") is left as it is; none -> "".
+export function raceLabel(race: string): string {
+  const r = race.trim();
+  return /^\d/.test(r) ? `Race ${r}` : r;
+}
+
+// "Case 7 - Test Cup" and "Race 5 - Protest + Redress - 2026-10-25 18:30" (no race: no "Race" part, no gap).
 export function titleLines(c: CaseFull): string[] {
   const kinds = c.kinds.split(',').map((k) => KIND_LABEL[k] ?? k).join(' + ');
   const when = c.hearing_at ? ` - ${c.hearing_at.replace('T', ' ')}` : '';
-  return [`Case ${c.case_number} - ${c.event_name}`, `${kinds}${when}`];
+  const race = raceLabel(c.race ?? '');
+  return [`Case ${c.case_number} - ${c.event_name}`, `${race ? `${race} - ` : ''}${kinds}${when}`];
 }
 
 export const witnessLine = (c: CaseFull): string =>

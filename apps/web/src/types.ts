@@ -44,6 +44,7 @@ export interface CaseSummary {
   event_id: number;
   event_name: string;
   case_number: string;
+  race: string; // race number as the protest form writes it; empty when unknown
   kinds: string; // comma-separated Kind values
   hearing_at: string | null;
   updated_at: string;
@@ -63,6 +64,7 @@ export interface CaseFull extends CaseSummary {
 export interface NewCaseInput {
   event_id: number;
   case_number: string;
+  race?: string;
   kinds: Kind[];
   hearing_at: string | null;
   parties: { role: Role; name: string; boat_name: string; sail_number: string }[];
@@ -78,6 +80,7 @@ export interface AttachmentRow {
 // Proposal read from the protest form(s); nothing is saved until the scribe accepts it.
 export interface Extraction {
   case_number: string;
+  race: string;
   claim_types: Kind[];
   parties: { role: Role; name: string; boat_name: string; sail_number: string }[];
 }

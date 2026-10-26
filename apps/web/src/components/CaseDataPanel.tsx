@@ -4,7 +4,7 @@ import { ApiError, AuthError, api, serverError } from '../api';
 import type { CaseFull, Kind } from '../types';
 import { PartiesEditor, WitnessesEditor, type PartyDraft, type WitnessDraft } from './PeopleEditor';
 
-type Update = Pick<Partial<CaseFull>, 'case_number' | 'kinds' | 'hearing_at' | 'parties' | 'witnesses'>;
+type Update = Pick<Partial<CaseFull>, 'case_number' | 'race' | 'kinds' | 'hearing_at' | 'parties' | 'witnesses'>;
 
 const KIND_OPTIONS: { value: Kind; label: string }[] = [
   { value: 'protest', label: 'Protest' },
@@ -40,6 +40,7 @@ export function CaseDataPanel({
   onAuthLost: () => void;
 }) {
   const [caseNumber, setCaseNumber] = useState(c.case_number);
+  const [race, setRace] = useState(c.race ?? '');
   const [kinds, setKinds] = useState<Kind[]>(c.kinds.split(',') as Kind[]);
   const [hearingAt, setHearingAt] = useState(c.hearing_at?.slice(0, 16) ?? '');
   const [parties, setParties] = useState<PartyDraft[]>(() => partiesOf(c));
@@ -65,12 +66,13 @@ export function CaseDataPanel({
   useEffect(() => {
     if (dirty) return;
     setCaseNumber(c.case_number);
+    setRace(c.race ?? '');
     setKinds(c.kinds.split(',') as Kind[]);
     setHearingAt(c.hearing_at?.slice(0, 16) ?? '');
     setParties(partiesOf(c));
     setWitnesses(witnessesOf(c));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c.case_number, c.kinds, c.hearing_at, c.parties, c.witnesses]);
+  }, [c.case_number, c.race, c.kinds, c.hearing_at, c.parties, c.witnesses]);
 
   useEffect(() => {
     if (open) first.current?.focus();
@@ -83,10 +85,12 @@ export function CaseDataPanel({
     try {
       const updated = await api.patchCase(c.id, {
         case_number: caseNumber.trim(),
+        race: race.trim(),
         kinds,
         hearing_at: hearingAt || null,
       });
       patch.case_number = updated.case_number;
+      patch.race = updated.race;
       patch.kinds = updated.kinds;
       patch.hearing_at = updated.hearing_at;
       const savedParties = await api.setParties(c.id, parties);
@@ -150,6 +154,16 @@ export function CaseDataPanel({
               onChange={(e) => {
                 setDirty(true);
                 setCaseNumber(e.target.value);
+              }}
+            />
+            <input
+              className="narrow"
+              placeholder="Race"
+              aria-label="Race"
+              value={race}
+              onChange={(e) => {
+                setDirty(true);
+                setRace(e.target.value);
               }}
             />
             <input
