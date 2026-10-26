@@ -1,4 +1,9 @@
-# SPEC-002 - Usage adjustments (queued, not started)
+# SPEC-002 - Usage adjustments
+
+Status 2026-10-26: A-1, A-2, A-3 (panel), A-4, A-5 done and checked in the browser. A-6 pending.
+Also done by the owner's order: the "Download .txt" button was removed (not needed). The case now sits in
+a left rail (case, save status, parties and witnesses, actions) and the five sections show their title in
+the left margin; the document fills the rest of the width.
 
 Source: owner feedback while trying SPEC-001 locally, 2026-10-26. Not scheduled: do after SPEC-001 T12-T13,
 or earlier if the owner says so. Each item still has to pass the drift test (CLAUDE.md).

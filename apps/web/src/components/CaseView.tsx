@@ -1,7 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { copyText, downloadText, fileName, fullText } from '../docFormat';
+import { copyText, fullText } from '../docFormat';
 import { ReadingView } from './ReadingView';
+import { CaseDataPanel } from './CaseDataPanel';
 import { ProtestFormDialog } from './ProtestFormDialog';
 import { SearchDialog } from './SearchDialog';
 import { matchData } from '../dataMatch';
@@ -29,49 +30,60 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   offline: 'Offline – will retry',
   failed: 'Not saved',
 };
-// Parties shown inline in the header; more than this fold into "Parties (N)".
-const INLINE_PARTIES = 4;
-
 const partyText = (p: PartyRow) =>
   `${ROLE_LABEL[p.role]}: ${[p.name, p.boat_name, p.sail_number].filter(Boolean).join(', ') || '—'}`;
 
-function Header({ c, status, children }: { c: CaseFull; status: SaveStatus; children?: ReactNode }) {
+// The case, kept beside the document: where the scribe is, whether it is saved, who is involved, and
+// the few things to do besides writing. Parties scroll inside the rail, so many parties never push
+// the document down.
+function CaseRail({ c, status, children }: { c: CaseFull; status: SaveStatus; children?: ReactNode }) {
   const kinds = c.kinds.split(',').map((k) => KIND_LABEL[k] ?? k).join(' + ');
   return (
-    <header className="doc-header">
-      <div className="doc-title">
-        <a href="#/">← Cases</a>
-        <strong>Case {c.case_number}</strong>
-        <span className="muted">
-          {c.event_name} · {kinds}
-          {c.hearing_at ? ` · ${c.hearing_at.replace('T', ' ')}` : ''}
-        </span>
-        <span className="spacer" />
-        <span className={`status status-${status}`} role="status">
-          {STATUS_LABEL[status]}
-        </span>
-      </div>
-      {c.parties.length <= INLINE_PARTIES ? (
-        <ul className="parties">
+    <aside className="rail">
+      <a href="#/" className="rail-back">
+        ← Cases
+      </a>
+      <h1>Case {c.case_number}</h1>
+      <p className="rail-meta">
+        {c.event_name}
+        <br />
+        {kinds}
+        {c.hearing_at ? `, ${c.hearing_at.replace('T', ' ')}` : ''}
+      </p>
+      <p className={`status status-${status}`} role="status">
+        <span className="dot" aria-hidden="true" />
+        {STATUS_LABEL[status]}
+      </p>
+      <div className="rail-people">
+        <h2>Parties ({c.parties.length})</h2>
+        <ul>
           {c.parties.map((p) => (
             <li key={p.id}>{partyText(p)}</li>
           ))}
         </ul>
-      ) : (
-        <details className="parties">
-          <summary>Parties ({c.parties.length})</summary>
-          <ul>
-            {c.parties.map((p) => (
-              <li key={p.id}>{partyText(p)}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {c.witnesses.length > 0 && (
-        <p className="muted witnesses">Witnesses: {c.witnesses.map((w) => w.name || '—').join(', ')}</p>
-      )}
-      <div className="doc-tools">{children}</div>
-    </header>
+        {c.witnesses.length > 0 && (
+          <>
+            <h2>Witnesses ({c.witnesses.length})</h2>
+            <ul>
+              {c.witnesses.map((w) => (
+                <li key={w.id}>{w.name || '—'}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+      <nav className="rail-tools">{children}</nav>
+    </aside>
+  );
+}
+
+// A rail action. The mouse down is cancelled so a click never takes the cursor out of the text.
+function Tool({ label, hint, onClick }: { label: string; hint?: string; onClick: () => void }) {
+  return (
+    <button className="tool" onMouseDown={(e) => e.preventDefault()} onClick={onClick}>
+      <span>{label}</span>
+      {hint && <kbd>{hint}</kbd>}
+    </button>
   );
 }
 
@@ -191,6 +203,7 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
+      <div className="section-body">
       <div className="field">
         <div className="mirror" aria-hidden="true">
           <span>{value.slice(0, caret)}</span>
@@ -233,6 +246,7 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
           </>
         )}
       </div>
+      </div>
     </section>
   );
 });
@@ -257,37 +271,51 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
   const [formAt, setFormAt] = useState<{ key: SectionKey; start: number; end: number } | null>(null);
   const formRef = useRef(formAt);
   formRef.current = formAt;
+  // Case data panel (SPEC-002 A-3): beside the document, not over it.
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelAt = useRef<{ key: SectionKey; start: number; end: number } | null>(null);
+  const [dataDirty, setDataDirty] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const copiedTimer = useRef<number | undefined>(undefined);
 
-  useEffect(() => {
-    const where = () => {
-      const key = SECTION_KEYS.find((k) => sectionRefs.current[k]?.hasFocus()) ?? lastSection.current;
-      return { key, ...(sectionRefs.current[key]?.selection() ?? { start: 0, end: 0 }) };
-    };
-    function leaveReading() {
-      const r = readingRef.current;
-      if (!r) return;
-      sectionRefs.current[r.key]?.restore(r);
-      setReading(null);
+  // Section and selection where the cursor is (or was last), to give it back after a dialog or reading.
+  const where = () => {
+    const key = SECTION_KEYS.find((k) => sectionRefs.current[k]?.hasFocus()) ?? lastSection.current;
+    return { key, ...(sectionRefs.current[key]?.selection() ?? { start: 0, end: 0 }) };
+  };
+  function leaveReading() {
+    const r = readingRef.current;
+    if (!r) return;
+    sectionRefs.current[r.key]?.restore(r);
+    setReading(null);
+  }
+  function toggleReading() {
+    if (searchRef.current || formRef.current) return;
+    if (readingRef.current) leaveReading();
+    else {
+      const at = where();
+      (document.activeElement as HTMLElement | null)?.blur();
+      setReading(at);
     }
+  }
+  function openSearch() {
+    if (readingRef.current || formRef.current) return;
+    setSearchAt((open) => open ?? where());
+  }
+
+  // The keys and the header buttons do the same thing. These handlers only use refs and state
+  // setters, so the copy registered once here stays correct.
+  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'F2') {
         e.preventDefault();
-        if (searchRef.current || formRef.current) return;
-        if (readingRef.current) leaveReading();
-        else {
-          const at = where();
-          (document.activeElement as HTMLElement | null)?.blur();
-          setReading(at);
-        }
+        toggleReading();
       } else if (e.key === 'Escape' && readingRef.current) {
         e.preventDefault();
         leaveReading();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        if (readingRef.current || formRef.current) return;
-        setSearchAt((open) => open ?? where());
+        openSearch();
       }
     }
     window.addEventListener('keydown', onKey);
@@ -311,8 +339,18 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
   }
 
   function openForm() {
-    const key = SECTION_KEYS.find((k) => sectionRefs.current[k]?.hasFocus()) ?? lastSection.current;
-    setFormAt({ key, ...(sectionRefs.current[key]?.selection() ?? { start: 0, end: 0 }) });
+    setFormAt(where());
+  }
+
+  function openPanel() {
+    panelAt.current = where();
+    setPanelOpen(true);
+  }
+
+  function closePanel() {
+    const at = panelAt.current;
+    setPanelOpen(false);
+    if (at) sectionRefs.current[at.key]?.restore(at);
   }
 
   function closeForm() {
@@ -348,24 +386,16 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
   if (!data || !sections) return <div className="center muted">Loading…</div>;
 
   return (
-    <div className="doc">
-      <Header c={data} status={status}>
-        <button className="ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => copy('all', fullText(data, sections))}>
-          {copied === 'all' ? 'Copied' : 'Copy all'}
-        </button>
-        <button
-          className="ghost"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => downloadText(fileName(data), fullText(data, sections))}
-        >
-          Download .txt
-        </button>
-        <button className="ghost" onMouseDown={(e) => e.preventDefault()} onClick={openForm}>
-          Protest form
-        </button>
-        {copied === 'failed' && <span className="error">Copy failed - select the text and copy by hand.</span>}
-        <span className="muted">F2 reading · Ctrl+K search</span>
-      </Header>
+    <div className={`doc${panelOpen ? ' with-panel' : ''}`}>
+      <CaseRail c={data} status={status}>
+        <Tool label="Search" hint="Ctrl+K" onClick={openSearch} />
+        <Tool label="Reading" hint="F2" onClick={toggleReading} />
+        <Tool label={`Case data${dataDirty ? ' •' : ''}`} onClick={panelOpen ? closePanel : openPanel} />
+        <Tool label="Protest form" onClick={openForm} />
+        <Tool label={copied === 'all' ? 'Copied' : 'Copy all'} onClick={() => copy('all', fullText(data, sections))} />
+        {copied === 'failed' && <p className="error">Copy failed. Select the text and copy it by hand.</p>}
+      </CaseRail>
+      <div className="doc-main">
       {replacedCopy && (
         <p className="notice">
           Another tab saved first. The server text is shown; your previous text is kept as a copy.{' '}
@@ -397,6 +427,15 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
           />
         ))}
       </main>
+      </div>
+      <CaseDataPanel
+        c={data}
+        open={panelOpen}
+        onApply={updateCase}
+        onClose={closePanel}
+        onDirtyChange={setDataDirty}
+        onAuthLost={onAuthLost}
+      />
       {reading && <ReadingView c={data} sections={sections} />}
       {formAt && <ProtestFormDialog c={data} onApply={updateCase} onClose={closeForm} onAuthLost={onAuthLost} />}
       {searchAt && <SearchDialog caseId={caseId} onPick={pickFromSearch} onClose={closeSearch} />}

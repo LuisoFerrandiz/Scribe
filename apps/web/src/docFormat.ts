@@ -1,6 +1,6 @@
 import { SECTION_KEYS, SECTION_LABEL, type CaseFull, type PartyRow, type Sections } from './types';
 
-// RF-009: plain text for pasting into the official form and for the .txt backup.
+// RF-009: plain text for pasting into the official form.
 
 const ROLE_LABEL: Record<PartyRow['role'], string> = {
   protestor: 'Protestor',
@@ -19,35 +19,28 @@ export function partiesBlock(c: CaseFull): string {
   return c.parties.map(partyLine).join('\n');
 }
 
-export function headerBlock(c: CaseFull): string {
+// "Case 7 - Test Cup" and "Protest + Redress - 2026-10-25 18:30".
+export function titleLines(c: CaseFull): string[] {
   const kinds = c.kinds.split(',').map((k) => KIND_LABEL[k] ?? k).join(' + ');
   const when = c.hearing_at ? ` - ${c.hearing_at.replace('T', ' ')}` : '';
-  const lines = [`Case ${c.case_number} - ${c.event_name}`, `${kinds}${when}`];
+  return [`Case ${c.case_number} - ${c.event_name}`, `${kinds}${when}`];
+}
+
+export const witnessLine = (c: CaseFull): string =>
+  c.witnesses.length > 0 ? `Witnesses: ${c.witnesses.map((w) => w.name || '-').join(', ')}` : '';
+
+export function headerBlock(c: CaseFull): string {
+  const lines = titleLines(c);
   const parties = partiesBlock(c);
   if (parties) lines.push('', parties);
-  if (c.witnesses.length > 0) lines.push('', `Witnesses: ${c.witnesses.map((w) => w.name || '-').join(', ')}`);
+  const witnesses = witnessLine(c);
+  if (witnesses) lines.push('', witnesses);
   return lines.join('\n');
 }
 
 export function fullText(c: CaseFull, sections: Sections): string {
   const body = SECTION_KEYS.map((k) => `${SECTION_LABEL[k]}\n${sections[k].trim()}`).join('\n\n');
   return `${headerBlock(c)}\n\n${body}\n`;
-}
-
-export function fileName(c: CaseFull): string {
-  const safe = c.case_number.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '') || String(c.id);
-  return `case-${safe}.txt`;
-}
-
-export function downloadText(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 // navigator.clipboard needs a secure context, and the app runs on plain HTTP on the LAN, so

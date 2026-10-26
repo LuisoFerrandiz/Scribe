@@ -1,32 +1,14 @@
 import { useEffect, useState } from 'react';
 import { AuthError, api, serverError } from '../api';
 import { go } from '../App';
-import type { EventRow, Kind, Role } from '../types';
-
-interface PartyDraft {
-  role: Role;
-  name: string;
-  boat_name: string;
-  sail_number: string;
-}
-interface WitnessDraft {
-  name: string;
-  supports: number | null; // index in the party list
-}
+import type { EventRow, Kind } from '../types';
+import { PartiesEditor, WitnessesEditor, emptyParty, type PartyDraft, type WitnessDraft } from './PeopleEditor';
 
 const KIND_OPTIONS: { value: Kind; label: string }[] = [
   { value: 'protest', label: 'Protest' },
   { value: 'redress', label: 'Redress' },
   { value: 'reopening', label: 'Reopening' },
 ];
-const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: 'protestor', label: 'Protestor' },
-  { value: 'respondent', label: 'Respondent' },
-  { value: 'other', label: 'Other' },
-];
-
-const emptyParty = (role: Role): PartyDraft => ({ role, name: '', boat_name: '', sail_number: '' });
-
 function nowLocal(): string {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -42,7 +24,11 @@ export function NewCase({ onAuthLost }: { onAuthLost: () => void }) {
   const [kinds, setKinds] = useState<Kind[]>(['protest']);
   const [hearingAt, setHearingAt] = useState(nowLocal);
   const [parties, setParties] = useState<PartyDraft[]>([emptyParty('protestor'), emptyParty('respondent')]);
-  const [witnesses, setWitnesses] = useState<WitnessDraft[]>([]);
+  // The usual case (about 80%): one protestor, one respondent, two witnesses. Empty witness rows are not saved.
+  const [witnesses, setWitnesses] = useState<WitnessDraft[]>([
+    { name: '', supports: null },
+    { name: '', supports: null },
+  ]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -56,26 +42,9 @@ export function NewCase({ onAuthLost }: { onAuthLost: () => void }) {
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(serverError(e))));
   }, [onAuthLost]);
 
-  const patchParty = (i: number, patch: Partial<PartyDraft>) =>
-    setParties((list) => list.map((p, j) => (j === i ? { ...p, ...patch } : p)));
-  const patchWitness = (i: number, patch: Partial<WitnessDraft>) =>
-    setWitnesses((list) => list.map((w, j) => (j === i ? { ...w, ...patch } : w)));
-
-  function removeParty(i: number) {
-    setParties((list) => list.filter((_, j) => j !== i));
-    // Witnesses pointing at the removed party lose it; later indexes shift down.
-    setWitnesses((list) =>
-      list.map((w) => ({
-        ...w,
-        supports: w.supports === null || w.supports === i ? null : w.supports > i ? w.supports - 1 : w.supports,
-      })),
-    );
-  }
-
   const toggleKind = (k: Kind) =>
     setKinds((list) => (list.includes(k) ? list.filter((x) => x !== k) : [...list, k]));
 
-  const partyLabel = (p: PartyDraft, i: number) => p.name || p.sail_number || p.boat_name || `Party ${i + 1}`;
   const needsEvent = eventId === 'new';
   const canSave =
     !busy && caseNumber.trim() !== '' && kinds.length > 0 && (!needsEvent || eventName.trim() !== '');
@@ -163,68 +132,8 @@ export function NewCase({ onAuthLost }: { onAuthLost: () => void }) {
           </div>
         </fieldset>
 
-        <fieldset>
-          <legend>Parties ({parties.length})</legend>
-          {parties.map((p, i) => (
-            <div className="row" key={i}>
-              <select value={p.role} onChange={(e) => patchParty(i, { role: e.target.value as Role })}>
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              <input placeholder="Name" value={p.name} onChange={(e) => patchParty(i, { name: e.target.value })} />
-              <input
-                placeholder="Boat"
-                value={p.boat_name}
-                onChange={(e) => patchParty(i, { boat_name: e.target.value })}
-              />
-              <input
-                placeholder="Sail no."
-                value={p.sail_number}
-                onChange={(e) => patchParty(i, { sail_number: e.target.value })}
-              />
-              <button type="button" className="ghost" onClick={() => removeParty(i)} aria-label="Remove party">
-                ×
-              </button>
-            </div>
-          ))}
-          <button type="button" className="ghost" onClick={() => setParties((l) => [...l, emptyParty('other')])}>
-            + Add party
-          </button>
-        </fieldset>
-
-        <fieldset>
-          <legend>Witnesses ({witnesses.length})</legend>
-          {witnesses.map((w, i) => (
-            <div className="row" key={i}>
-              <input placeholder="Name" value={w.name} onChange={(e) => patchWitness(i, { name: e.target.value })} />
-              <select
-                value={w.supports ?? ''}
-                onChange={(e) => patchWitness(i, { supports: e.target.value === '' ? null : Number(e.target.value) })}
-              >
-                <option value="">Supports: nobody in particular</option>
-                {parties.map((p, j) => (
-                  <option key={j} value={j}>
-                    Supports: {partyLabel(p, j)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setWitnesses((l) => l.filter((_, j) => j !== i))}
-                aria-label="Remove witness"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          <button type="button" className="ghost" onClick={() => setWitnesses((l) => [...l, { name: '', supports: null }])}>
-            + Add witness
-          </button>
-        </fieldset>
+        <PartiesEditor parties={parties} setParties={setParties} setWitnesses={setWitnesses} />
+        <WitnessesEditor parties={parties} witnesses={witnesses} setWitnesses={setWitnesses} />
 
         {error && <p className="error">{error}</p>}
         <button type="submit" disabled={!canSave}>

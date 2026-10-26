@@ -35,22 +35,26 @@ function ruleItem(r: SearchRule, group: string): Item {
   };
 }
 
-function itemsOf(r: SearchResponse | null): Item[] {
+// The number of a citation, "RRS 63.1" -> "63.1".
+const numberOf = (citation: string | null) => citation?.replace(/^\S+\s+/, '').toLowerCase() ?? '';
+
+function itemsOf(r: SearchResponse | null, query: string): Item[] {
   if (!r) return [];
-  return [
-    ...r.phrases.map(
-      (p): Item => ({
-        key: `p-${p.id}`,
-        group: 'Phrases',
-        tag: BOX_LABEL[p.box] ?? p.box,
-        title: p.label,
-        detail: p.body,
-        suggestion: { kind: 'phrase', id: p.id, label: p.label, body: p.body },
-      }),
-    ),
-    ...r.rrs.map((x) => ruleItem(x, 'RRS')),
-    ...r.event.map((x) => ruleItem(x, 'Event documents')),
-  ];
+  const typed = query.replace(/\s+/g, '').toLowerCase();
+  // A typed rule number ("rule 63.1") puts the rule groups before the phrases.
+  const exactRule = [...r.rrs, ...r.event].some((x) => /\d/.test(numberOf(x.citation)) && typed.includes(numberOf(x.citation)));
+  const phrases: Item[] = r.phrases.map(
+    (p): Item => ({
+      key: `p-${p.id}`,
+      group: 'Phrases',
+      tag: BOX_LABEL[p.box] ?? p.box,
+      title: p.label,
+      detail: p.body,
+      suggestion: { kind: 'phrase', id: p.id, label: p.label, body: p.body },
+    }),
+  );
+  const rules = [...r.rrs.map((x) => ruleItem(x, 'RRS')), ...r.event.map((x) => ruleItem(x, 'Event documents'))];
+  return exactRule ? [...rules, ...phrases] : [...phrases, ...rules];
 }
 
 // RF-006: one box, three sources queried separately (at most 5 each). Enter inserts the chosen
@@ -95,7 +99,7 @@ export function SearchDialog({
     };
   }, [query, caseId]);
 
-  const items = useMemo(() => itemsOf(results), [results]);
+  const items = useMemo(() => itemsOf(results, query), [results, query]);
 
   useEffect(() => {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -141,7 +145,7 @@ export function SearchDialog({
                 <div
                   className={`search-item${it.suggestion ? '' : ' disabled'}`}
                   aria-selected={i === index}
-                  onMouseEnter={() => setIndex(i)}
+                  onMouseMove={() => i !== index && setIndex(i)}
                   onClick={() => it.suggestion && onPick(it.suggestion)}
                 >
                   <div className="search-head">
