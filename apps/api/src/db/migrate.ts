@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { db } from './connection.js';
-import { seedBasePhrases } from './seedPhrases.js';
+import { syncPhrasesAtStart } from '../phrases/files.js';
+import { PHRASES_DIR } from '../phrases/location.js';
 import { seedAdminUser } from './seedAdmin.js';
 import { seedRrs } from './seedRrs.js';
 import { ensureColumns } from './columns.js';
@@ -18,5 +19,5 @@ ensureColumns(db, path.join(config.dataDir, 'db'));
 await seedRrs();
 await indexPendingSections();
 await reindexIfParserChanged();
-await seedBasePhrases();
+syncPhrasesAtStart(db, PHRASES_DIR);
 seedAdminUser();

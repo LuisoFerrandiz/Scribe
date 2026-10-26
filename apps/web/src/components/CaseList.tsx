@@ -4,6 +4,7 @@ import { go } from '../App';
 import { raceLabel } from '../docFormat';
 import { clearCaseLocal } from '../draftStore';
 import { ConfirmButton } from './ConfirmButton';
+import { PhrasesDialog } from './PhrasesDialog';
 import type { CaseSummary, SessionUser } from '../types';
 
 const KIND_LABEL: Record<string, string> = { protest: 'Protest', redress: 'Redress', reopening: 'Reopening' };
@@ -19,6 +20,7 @@ export function CaseList({
 }) {
   const [cases, setCases] = useState<CaseSummary[] | null>(null);
   const [error, setError] = useState('');
+  const [phrases, setPhrases] = useState(false);
 
   useEffect(() => {
     api
@@ -44,6 +46,11 @@ export function CaseList({
       <header className="bar">
         <h1>Cases</h1>
         <span className="spacer" />
+        {user.role === 'admin' && (
+          <button className="ghost" onClick={() => setPhrases(true)}>
+            Phrases
+          </button>
+        )}
         <button className="ghost" onClick={() => go('#/documents')}>
           Event documents
         </button>
@@ -52,6 +59,7 @@ export function CaseList({
           Sign out
         </button>
       </header>
+      {phrases && <PhrasesDialog onClose={() => setPhrases(false)} onAuthLost={onAuthLost} />}
       {error && <p className="error">{error}</p>}
       {cases === null && !error && <p className="muted">Loading…</p>}
       {cases?.length === 0 && <p className="muted">No cases yet.</p>}

@@ -8,9 +8,13 @@ import { registerAuthGuard } from './auth/guard.js';
 import path from 'node:path';
 import { ensureColumns } from './db/columns.js';
 import { db } from './db/connection.js';
+import { syncPhrasesAtStart } from './phrases/files.js';
+import { PHRASES_DIR } from './phrases/location.js';
 
 // A database made before a column existed gets it now, on the same connection the API uses.
 ensureColumns(db, path.join(config.dataDir, 'db'));
+// The base phrases are the .md files the owner edits; the database follows them (SPEC-006).
+syncPhrasesAtStart(db, PHRASES_DIR, (m) => console.log(m));
 
 const app = Fastify({ logger: true });
 

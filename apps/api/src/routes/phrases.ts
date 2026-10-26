@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import { requireAdmin } from '../auth/guard.js';
 import { db } from '../db/connection.js';
+import { phraseStatus, syncPhrases } from '../phrases/files.js';
+import { PHRASES_DIR } from '../phrases/location.js';
 
 interface PhraseRow {
   id: number;
@@ -10,10 +13,20 @@ interface PhraseRow {
   created_at: string;
 }
 
-// Phase 2 phrase library (CONTEXT.md section 6, D-022). base phrases come
-// from the seeded spreadsheet and are never editable/deletable, same
-// base/own split as example resources (D-007).
+// Phrase library. Base phrases come from the .md files in data/phrases/base (SPEC-006, D-006): the
+// files are edited by hand and the database is reloaded from them; the routes never edit or delete a
+// base phrase. Own phrases are the owner's (same base/own split as example resources, D-007).
 export function registerPhraseRoutes(app: FastifyInstance) {
+  // What a reload would do: the phrases of each file and whether the files differ from the database.
+  app.get('/phrases/status', { preHandler: requireAdmin }, () => phraseStatus(db, PHRASES_DIR));
+
+  // All or nothing: any error in any file changes nothing and comes back with file, line and reason.
+  app.post('/phrases/reload', { preHandler: requireAdmin }, (_req, reply) => {
+    const r = syncPhrases(db, PHRASES_DIR);
+    if (!r.ok) return reply.code(422).send({ errors: r.errors });
+    return { total: r.total, added: r.added, removed: r.removed, changed: r.changed };
+  });
+
   app.get('/phrases', (req) => {
     const { box } = req.query as { box?: string };
     if (box) {

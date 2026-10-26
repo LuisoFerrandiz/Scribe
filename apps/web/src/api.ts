@@ -13,6 +13,8 @@ import type {
   Sections,
   SessionUser,
   SuggestResponse,
+  PhraseReload,
+  PhraseStatus,
   WitnessRow,
 } from './types';
 
@@ -117,6 +119,8 @@ export const api = {
   acceptResource: (id: number) => request<ResourceRow>(`/resources/${id}/accept`, { method: 'POST' }),
   rejectResource: (id: number) => request<void>(`/resources/${id}/reject`, { method: 'POST' }),
   deleteResource: (id: number) => request<void>(`/resources/${id}`, { method: 'DELETE' }),
+  phraseStatus: () => request<PhraseStatus>('/phrases/status'),
+  reloadPhrases: () => request<PhraseReload>('/phrases/reload', { method: 'POST' }),
   setWitnesses: (caseId: number, witnesses: { name: string; supports_party_id: number | null }[]) =>
     send<WitnessRow[]>('PUT', `/cases/${caseId}/witnesses`, { witnesses }),
 };

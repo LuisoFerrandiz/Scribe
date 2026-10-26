@@ -72,3 +72,16 @@ antes los choques con lo ya pedido (por ejemplo, esconder a la vez botones que e
 
 **Alcance.** Cambios de comportamiento o pantallas nuevas. Los ajustes mínimos (texto, color, error evidente) se anotan en
 SPEC-002 o en el commit sin spec.
+
+## D-006 — Las frases base salen de 8 ficheros .md editables, no de un .md único sembrado una vez (2026-10-26)
+
+**Decisión.** Las frases base viven en `data/phrases/base/*.md` (uno por apartado con frases: Procedural Matters, Validity,
+Protest/Redress Conclusions, Protest/Redress Decisions, Reopenings, NO Hearing), con formato `### etiqueta` + texto. La BD
+se recarga desde ellos al arrancar la API y con un botón, y la recarga es todo o nada si algún fichero tiene un error.
+El `.md` único, el conversor y el parser HTML se retiran; el `.xlsx` original queda en `apps/api/seed/` sin leerse. Sustituye
+la fuente de frases de D-022 (proyecto anterior) y de SPEC-005 (siembra única).
+
+**Por qué.** Lo pidió el dueño: poder corregir las frases a mano y que la app las vea. El texto de cada frase se guarda sin
+transformar para poder rellenar los corchetes en una spec posterior.
+
+**Alcance.** Solo las frases `base`; las `own` no se tocan. Rellenar corchetes y una pantalla para frases propias quedan fuera.

@@ -136,3 +136,24 @@ export interface ResourceRow {
 export interface ResourceDetail extends ResourceRow {
   sectionsPreview: { count: number; sample: string[] } | null;
 }
+
+// SPEC-006: the base phrases are .md files; the database is reloaded from them.
+export interface PhraseFileError {
+  file: string;
+  line: number;
+  message: string;
+}
+export interface PhraseStatus {
+  files: { file: string; count: number; errors: PhraseFileError[] }[];
+  errors: PhraseFileError[];
+  total: number;
+  differs: boolean;
+  added: number;
+  removed: number;
+}
+export interface PhraseReload {
+  total: number;
+  added: number;
+  removed: number;
+  changed: boolean;
+}

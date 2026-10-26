@@ -183,3 +183,8 @@ button.rail-toggle:hover { background: rgba(20, 41, 61, 0.08); }
 
 .row > input.narrow { flex: 0 0 7rem; }
 .rail-meta strong { color: var(--fg); }
+
+/* Phrases dialog (SPEC-006) */
+.phrase-files { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; overflow: visible; }
+.phrase-files li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px solid var(--line, #ddd); }
+.form-box .error ul { margin: 4px 0 0 18px; padding: 0; list-style: disc; overflow: visible; }
