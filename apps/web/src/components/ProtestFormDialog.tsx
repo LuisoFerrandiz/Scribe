@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, AuthError, api, serverError } from '../api';
 import { mergeParties, newParties } from '../mergeParties';
+import { mergeWitnesses, newWitnesses } from '../mergeWitnesses';
 import type { AttachmentRow, CaseFull, Extraction, Kind } from '../types';
 
 const KIND_LABEL: Record<Kind, string> = { protest: 'Protest', redress: 'Redress', reopening: 'Reopening' };
 const ROLE_LABEL = { protestor: 'Protestor', respondent: 'Respondent', other: 'Party' } as const;
 
-type Update = Pick<Partial<CaseFull>, 'case_number' | 'race' | 'kinds' | 'parties'>;
+type Update = Pick<Partial<CaseFull>, 'case_number' | 'race' | 'kinds' | 'parties' | 'witnesses'>;
 
 // RF-002: upload the protest form(s), ask for a proposal, and apply only what the scribe ticks.
 // The proposal never touches the document text; with no AI configured the case is filled by hand.
@@ -25,7 +26,7 @@ export function ProtestFormDialog({
   const [busy, setBusy] = useState<'upload' | 'read' | 'apply' | null>(null);
   const [error, setError] = useState('');
   const [proposal, setProposal] = useState<Extraction | null>(null);
-  const [take, setTake] = useState({ number: true, race: true, kinds: true, parties: true });
+  const [take, setTake] = useState({ number: true, race: true, kinds: true, parties: true, witnesses: true });
   const input = useRef<HTMLInputElement>(null);
 
   function fail(e: unknown) {
@@ -70,7 +71,7 @@ export function ProtestFormDialog({
     try {
       const p = await api.extract(c.id);
       setProposal(p);
-      setTake({ number: true, race: true, kinds: true, parties: true });
+      setTake({ number: true, race: true, kinds: true, parties: true, witnesses: true });
     } catch (e) {
       fail(e);
     } finally {
@@ -80,11 +81,13 @@ export function ProtestFormDialog({
 
   const fresh = proposal ? newParties(c.parties, proposal.parties) : [];
   const partyChanges = fresh.length > 0;
+  const freshWitnesses = proposal ? newWitnesses(c.witnesses, proposal.witnesses) : [];
+  const witnessChanges = freshWitnesses.length > 0;
   const numberChanges = !!proposal?.case_number && proposal.case_number !== c.case_number;
   const raceChanges = !!proposal?.race && proposal.race !== c.race;
   const kindsText = proposal?.claim_types.join(',') ?? '';
   const kindsChange = !!kindsText && kindsText !== c.kinds;
-  const nothingNew = !!proposal && !numberChanges && !raceChanges && !kindsChange && !partyChanges;
+  const nothingNew = !!proposal && !numberChanges && !raceChanges && !kindsChange && !partyChanges && !witnessChanges;
 
   async function apply() {
     if (!proposal) return;
@@ -105,11 +108,15 @@ export function ProtestFormDialog({
       if (partyChanges && take.parties) {
         patch.parties = await api.setParties(c.id, mergeParties(c.parties, proposal.parties));
       }
+      if (witnessChanges && take.witnesses) {
+        const saved = await api.setWitnesses(c.id, mergeWitnesses(c.witnesses, proposal.witnesses));
+        patch.witnesses = saved;
+      }
       onApply(patch);
       onClose();
     } catch (e) {
       // Whatever was saved before the failure is shown, so the case and the screen agree.
-      if (patch.case_number !== undefined || patch.kinds) onApply(patch);
+      if (Object.keys(patch).length > 0) onApply(patch);
       fail(e);
       setBusy(null);
     }
@@ -191,6 +198,19 @@ export function ProtestFormDialog({
                   <li key={i}>
                     {ROLE_LABEL[p.role]}: {[p.name, p.boat_name, p.sail_number].filter(Boolean).join(', ')}
                   </li>
+                ))}
+              </ul>
+            )}
+            {witnessChanges && (
+              <label>
+                <input type="checkbox" checked={take.witnesses} onChange={(e) => setTake({ ...take, witnesses: e.target.checked })} />
+                Add {freshWitnesses.length} {freshWitnesses.length === 1 ? 'witness' : 'witnesses'}:
+              </label>
+            )}
+            {witnessChanges && (
+              <ul>
+                {freshWitnesses.map((n, i) => (
+                  <li key={i}>{n}</li>
                 ))}
               </ul>
             )}

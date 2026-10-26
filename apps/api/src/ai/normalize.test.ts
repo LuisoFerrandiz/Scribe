@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ExtractError, cleanRaces, normalize } from './normalize.js';
+import { ExtractError, cleanRaces, cleanWitnesses, normalize } from './normalize.js';
 
 describe('normalize (what the model returned -> a proposal)', () => {
   it('keeps the known shape and drops what is not known', () => {
@@ -27,7 +27,7 @@ describe('normalize (what the model returned -> a proposal)', () => {
   });
 
   it('gives an empty proposal for a wrong shape, and an error for no JSON', () => {
-    expect(normalize('{"parties":"no"}')).toEqual({ case_number: '', race: '', claim_types: [], parties: [] });
+    expect(normalize('{"parties":"no"}')).toEqual({ case_number: '', race: '', claim_types: [], parties: [], witnesses: [] });
     expect(() => normalize('nothing here')).toThrow(ExtractError);
     expect(() => normalize('{bad}')).toThrow(/no valid JSON/);
   });
@@ -49,5 +49,16 @@ describe('race', () => {
   });
   it('is never longer than the case field', () => {
     expect(cleanRaces(Array.from({ length: 30 }, (_, i) => String(i + 10)).join(',')).length).toBeLessThanOrEqual(40);
+  });
+});
+
+describe('witnesses', () => {
+  it('are names as written, trimmed, each once', () => {
+    expect(normalize('{"witnesses":[" Ana Ruiz ","ana  ruiz","Bo",""," ",3,null]}').witnesses).toEqual(['Ana Ruiz', 'Bo']);
+  });
+  it('are an empty list when the form names none or the shape is wrong', () => {
+    expect(normalize('{"case_number":"7"}').witnesses).toEqual([]);
+    expect(cleanWitnesses('Ana')).toEqual([]);
+    expect(cleanWitnesses([])).toEqual([]);
   });
 });

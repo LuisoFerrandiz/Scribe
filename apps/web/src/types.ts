@@ -83,6 +83,7 @@ export interface Extraction {
   race: string;
   claim_types: Kind[];
   parties: { role: Role; name: string; boat_name: string; sail_number: string }[];
+  witnesses: string[];
 }
 
 export type Suggestion =

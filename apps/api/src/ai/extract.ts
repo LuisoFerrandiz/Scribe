@@ -15,6 +15,7 @@ const SYSTEM =
   'asks for. Omit nothing you can read, add nothing you cannot. ' +
   'race is the race number the form states (its "Race No." or similar), exactly as written; when several forms ' +
   'state different races list each one once, comma separated; empty when the form states none, never a guess. ' +
+  'witnesses are the people the form names as witnesses, names only, as written; an empty list when the form names none, never a guess. ' +
   'Return ONLY a JSON object, no markdown fence, no explanation.';
 
 const SHAPE = JSON.stringify(
@@ -23,6 +24,7 @@ const SHAPE = JSON.stringify(
     race: 'string, the race number the form states ("Race No."), "" if none',
     claim_types: ['protest'],
     parties: [{ role: 'protestor', name: 'string', boat_name: 'string', sail_number: 'string' }],
+    witnesses: ['string, a witness name'],
   },
   null,
   2,
@@ -42,7 +44,7 @@ export async function extractFromAttachments(caseId: number): Promise<Extraction
     readable.map(async (r) => `--- ${r.original_filename} ---\n${await readMarkdown(r.markdown_path!)}`),
   );
   const prompt = [
-    'Extract the case number, race, claim types and parties from these protest form(s).',
+    'Extract the case number, race, claim types, parties and witnesses from these protest form(s).',
     '',
     ...bodies,
     '',

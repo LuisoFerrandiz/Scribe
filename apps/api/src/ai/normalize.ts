@@ -5,6 +5,7 @@ export interface Extraction {
   race: string; // as the form writes it; several distinct races comma separated; empty if none
   claim_types: ('protest' | 'redress' | 'reopening')[];
   parties: { role: 'protestor' | 'respondent' | 'other'; name: string; boat_name: string; sail_number: string }[];
+  witnesses: string[]; // names as the form writes them; empty if it names none
 }
 
 // Thrown with a status the route passes on: 503 no key, 422 nothing to read, 502 model failure.
@@ -19,6 +20,22 @@ export class ExtractError extends Error {
 
 const MAX_PARTIES = 200;
 const MAX_RACE = 40;
+const MAX_WITNESSES = 50;
+
+// Names only: trimmed, no empties, each name once (ignoring case and spaces), in the order seen.
+export function cleanWitnesses(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const w of v) {
+    const name = typeof w === 'string' ? w.trim() : '';
+    const key = name.toLowerCase().replace(/\s+/g, ' ');
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out.slice(0, MAX_WITNESSES);
+}
 
 // "5, 5, 5" -> "5": each distinct race once, in the order seen, and never longer than the case field.
 export function cleanRaces(v: unknown): string {
@@ -67,5 +84,6 @@ export function normalize(text: string): Extraction {
         return party.name || party.boat_name || party.sail_number ? [party] : [];
       })
       .slice(0, MAX_PARTIES),
+    witnesses: cleanWitnesses(obj.witnesses),
   };
 }
