@@ -31,8 +31,9 @@ input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); 
 .login { max-width: 320px; margin: 15vh auto; display: grid; gap: 12px; }
 .login label { display: grid; gap: 4px; }
 .cases { list-style: none; padding: 0; margin: 0; }
-.cases a { display: grid; grid-template-columns: 6rem 1fr 14rem 11rem; gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; }
-.cases a:hover { background: #f0efe9; }
+.cases a { display: grid; grid-template-columns: 7rem minmax(10rem, 18rem) 14rem 12rem; gap: 16px; padding: 12px 8px; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; }
+.cases a:hover { background: var(--rail); }
+.cases-head { display: grid; grid-template-columns: 7rem minmax(10rem, 18rem) 14rem 12rem; gap: 16px; padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .newcase { display: grid; gap: 16px; }
 fieldset { border: 1px solid var(--line); border-radius: 6px; display: grid; gap: 8px; padding: 12px; }
 legend { font-weight: 600; padding: 0 6px; }
@@ -70,9 +71,11 @@ legend { font-weight: 600; padding: 0 6px; }
 
 /* Reading mode */
 .reading { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; outline: none; }
-.reading-inner { max-width: 800px; margin: 0 auto; padding: 32px 24px 80px; font-family: var(--doc); font-size: 1.5rem; line-height: 1.6; }
+.reading-inner { padding: 32px clamp(24px, 4vw, 64px) 80px; font-family: var(--doc); font-size: clamp(1.4rem, 0.9rem + 0.7vw, 2rem); line-height: 1.55; }
 .reading-head { font: 1rem/1.5 var(--ui); color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 12px; }
-.reading h2 { font: 600 0.85rem var(--ui); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 28px 0 4px; }
+.reading section { display: grid; grid-template-columns: 11rem minmax(0, 1fr); column-gap: 24px; margin-top: 32px; }
+.reading h2 { font: 650 0.95rem var(--ui); color: var(--fg); margin: 0.6em 0 0; }
+@media (max-width: 900px) { .reading section { grid-template-columns: minmax(0, 1fr); } }
 .reading section p { white-space: pre-wrap; margin: 0; }
 .reading-foot { font: 0.85rem var(--ui); margin-top: 40px; }
 

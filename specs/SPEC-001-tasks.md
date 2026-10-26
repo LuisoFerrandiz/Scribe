@@ -17,7 +17,7 @@ Commit por bloque, solo con orden del dueño. Cada archivo copiado del old se an
 - [x] T9 Web: línea de sugerencia fija (RF-005, Tab solo con sugerencia visible).
 - [x] T10 Web: `Ctrl+K` e inserción de cita verificada (RF-006).
 - [x] T11 Web: `F2` modo lectura con restauración de cursor; copiar sección/todo y descargar .txt (RF-008, RF-009).
-- [x] T12 `ai/extract.ts` mínimo y `POST /cases/:id/extract`; UI de propuesta con aceptación.
+- [x] T12 `ai/extract.ts` mínimo y `POST /cases/:id/extract`; UI de propuesta con aceptación. Verificado con la IA real y un formulario de prueba (2026-10-26).
 - [~] T13 Verificación local de los criterios 1-7 con casos de prueba (incluye cortar red y reabrir, 60 partes,
       dos pestañas con 409).
 - [ ] T14 (APLAZADO: el dueño usará la app solo en local, 2026-10-26) Despliegue (stack nuevo) y verificación en vivo.

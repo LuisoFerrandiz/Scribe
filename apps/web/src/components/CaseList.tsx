@@ -37,6 +37,14 @@ export function CaseList({
       {error && <p className="error">{error}</p>}
       {cases === null && !error && <p className="muted">Loading…</p>}
       {cases?.length === 0 && <p className="muted">No cases yet.</p>}
+      {cases && cases.length > 0 && (
+        <div className="cases-head" aria-hidden="true">
+          <span>Case</span>
+          <span>Event</span>
+          <span>Type</span>
+          <span>Hearing</span>
+        </div>
+      )}
       <ul className="cases">
         {cases?.map((c) => (
           <li key={c.id}>
