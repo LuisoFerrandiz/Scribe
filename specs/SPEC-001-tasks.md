@@ -18,7 +18,10 @@ Commit por bloque, solo con orden del dueño. Cada archivo copiado del old se an
 - [x] T10 Web: `Ctrl+K` e inserción de cita verificada (RF-006).
 - [x] T11 Web: `F2` modo lectura con restauración de cursor; copiar sección/todo y descargar .txt (RF-008, RF-009).
 - [x] T12 `ai/extract.ts` mínimo y `POST /cases/:id/extract`; UI de propuesta con aceptación. Verificado con la IA real y un formulario de prueba (2026-10-26).
-- [~] T13 Verificación local de los criterios 1-7 con casos de prueba (incluye cortar red y reabrir, 60 partes,
+- [x] T13 Verificación local de los criterios 1-7 con casos de prueba (incluye cortar red y reabrir, 60 partes,
       dos pestañas con 409).
+      Verificado el 2026-10-26 en navegador sobre una copia de la BD: criterios 3-7 pasan (sugerencia `ITA 38`->`56`; búsqueda
+      7-30 ms; sin cambio de layout; F2 restaura sección y cursor; servidor caído + recarga + reconexión sin pérdida). Los
+      criterios 1 y 2 solo se miden en una audiencia real (T15).
 - [ ] T14 (APLAZADO: el dueño usará la app solo en local, 2026-10-26) Despliegue (stack nuevo) y verificación en vivo.
 - [ ] T15 Prueba en una audiencia real (criterio 8); anotar fallos; corregir antes de añadir funciones.
