@@ -3,7 +3,8 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { db } from '../db/connection.js';
-import { ExtractError, extractFromAttachments } from '../ai/extract.js';
+import { extractFromAttachments } from '../ai/extract.js';
+import { ExtractError } from '../ai/normalize.js';
 import { deleteAttachmentFiles, storeAttachment } from '../case-attachments/storage.js';
 
 interface CaseAttachmentRow {

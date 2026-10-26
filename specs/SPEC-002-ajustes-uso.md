@@ -1,6 +1,6 @@
 # SPEC-002 - Usage adjustments
 
-Status 2026-10-26: A-1, A-2, A-3 (panel), A-4, A-5 done and checked in the browser. A-6 pending.
+Status 2026-10-26: A-1 to A-6 done and checked in the browser.
 Also done by the owner's order: the "Download .txt" button was removed (not needed). The case now sits in
 a left rail (case, save status, parties and witnesses, actions) and the five sections show their title in
 the left margin; the document fills the rest of the width.
@@ -43,5 +43,8 @@ and return to the document with nothing lost.
   different row than the one the keyboard chose; move the highlight on mouse movement only. (b) A typed rule
   number ("rule 63.1") finds the section, but the "Phrases" group is listed first and the RRS hit is below it;
   show the exact rule hit first.
-- **A-6 "Restore my text" after a two-tab conflict** puts back the whole old text of all five sections, which
+- **A-6 (done: per-section restore)** "Restore my text" after a two-tab conflict puts back the whole old text of all five sections, which
   can overwrite what the other tab typed. Consider restoring per section, or showing what differs.
+
+A-6 as built: after a 409 the server text is shown and only the sections THIS tab changed (and the server replaced) are listed
+with a "Restore mine" button each; a section only the other tab changed is never offered. Pure logic in `conflict.ts`.

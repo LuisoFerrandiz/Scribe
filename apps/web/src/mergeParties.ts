@@ -6,28 +6,32 @@ export type PartyInput = Omit<PartyRow, 'id'> & { id?: number };
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
 const isEmpty = (p: Omit<PartyRow, 'id'>) => !p.name.trim() && !p.boat_name.trim() && !p.sail_number.trim();
 
-// The same boat: equal sail number, or (when either has none) equal name and boat.
+// A party needs only ONE of sail number, boat or name. Two parties are the same boat when they
+// share any one of them (compared ignoring case and spaces).
 function same(a: Omit<PartyRow, 'id'>, b: Omit<PartyRow, 'id'>): boolean {
-  if (a.sail_number.trim() && b.sail_number.trim()) return norm(a.sail_number) === norm(b.sail_number);
-  return norm(a.name) === norm(b.name) && norm(a.boat_name) === norm(b.boat_name);
+  return (['sail_number', 'boat_name', 'name'] as const).some((k) => a[k].trim() && b[k].trim() && norm(a[k]) === norm(b[k]));
 }
 
-// Parties of the form that the case does not have yet.
+// The boats of a form the case does not have yet. A boat in several forms (protestor in one,
+// respondent in another) counts once; its role is not changed, and the case keeps whatever it has.
 export function newParties(existing: PartyRow[], proposed: Proposed[]): Proposed[] {
-  return proposed.filter((p) => !existing.some((e) => same(e, p)));
+  const out: Proposed[] = [];
+  for (const p of proposed) {
+    if (existing.some((e) => same(e, p)) || out.some((o) => same(o, p))) continue;
+    out.push({ ...p });
+  }
+  return out;
 }
 
-// Accepting adds the new parties. An existing party with no data (did not appear) of the same
-// role is filled in place, so its id and any witness linked to it survive; nothing is removed.
+// The party list to save: everything the case has, plus the new boats. A party with no data
+// (did not appear) of the same role is filled in place, so its id and any witness linked to it
+// survive. Nothing is removed or overwritten.
 export function mergeParties(existing: PartyRow[], proposed: Proposed[]): PartyInput[] {
   const result: PartyInput[] = existing.map((e) => ({ ...e }));
   for (const p of newParties(existing, proposed)) {
     const slot = result.find((r) => r.id !== undefined && isEmpty(r) && r.role === p.role);
-    if (slot) {
-      Object.assign(slot, p);
-    } else {
-      result.push({ ...p });
-    }
+    if (slot) Object.assign(slot, p);
+    else result.push({ ...p });
   }
   return result;
 }

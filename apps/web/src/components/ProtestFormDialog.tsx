@@ -79,10 +79,11 @@ export function ProtestFormDialog({
   }
 
   const fresh = proposal ? newParties(c.parties, proposal.parties) : [];
+  const partyChanges = fresh.length > 0;
   const numberChanges = !!proposal?.case_number && proposal.case_number !== c.case_number;
   const kindsText = proposal?.claim_types.join(',') ?? '';
   const kindsChange = !!kindsText && kindsText !== c.kinds;
-  const nothingNew = !!proposal && !numberChanges && !kindsChange && fresh.length === 0;
+  const nothingNew = !!proposal && !numberChanges && !kindsChange && !partyChanges;
 
   async function apply() {
     if (!proposal) return;
@@ -98,7 +99,7 @@ export function ProtestFormDialog({
         patch.case_number = updated.case_number;
         patch.kinds = updated.kinds;
       }
-      if (fresh.length > 0 && take.parties) {
+      if (partyChanges && take.parties) {
         patch.parties = await api.setParties(c.id, mergeParties(c.parties, proposal.parties));
       }
       onApply(patch);
@@ -169,13 +170,13 @@ export function ProtestFormDialog({
                 Claim: <strong>{proposal.claim_types.map((k) => KIND_LABEL[k]).join(' + ')}</strong>
               </label>
             )}
-            {fresh.length > 0 && (
+            {partyChanges && (
               <label>
                 <input type="checkbox" checked={take.parties} onChange={(e) => setTake({ ...take, parties: e.target.checked })} />
                 Add {fresh.length} {fresh.length === 1 ? 'party' : 'parties'}:
               </label>
             )}
-            {fresh.length > 0 && (
+            {partyChanges && (
               <ul>
                 {fresh.map((p, i) => (
                   <li key={i}>

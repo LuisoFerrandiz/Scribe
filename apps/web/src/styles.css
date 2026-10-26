@@ -138,3 +138,7 @@ button.tool kbd { font: 0.72rem var(--ui); color: var(--muted); }
   .copy-btn { opacity: 1; }
 }
 .panel-actions { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0; border-top: 1px solid var(--line); }
+.notice p { margin: 0 0 6px; }
+.notice ul { list-style: none; margin: 0 0 8px; padding: 0; }
+.notice li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+.notice li .muted { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -16,7 +16,7 @@ export interface RuleSectionDraft {
   position: number;
 }
 
-const TAB_HEADER = /^([A-Z]{0,2}\d+(?:\.\d+)*)[  ]*\t+\s*(\S.*)$/;
+const TAB_HEADER = /^([A-Z]{0,2}\d+(?:\.\d+)*)[ \u00a0]*\t+\s*(\S.*)$/;
 const SPACE_HEADER = /^(\d+(?:\.\d+)*)(\.?)\s+(\S.*)$/;
 // SPEC-033 RF-009: the dot after the letters is required, so it never clashes with
 // the tab style of the RRS (`A2`, no dot).

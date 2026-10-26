@@ -251,8 +251,11 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
   );
 });
 
+// The start of a section's text, for the conflict notice.
+const preview = (t: string) => (t.trim().length > 70 ? `${t.trim().slice(0, 70)}…` : t.trim() || '(empty)');
+
 export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: () => void }) {
-  const { data, sections, status, loadError, replacedCopy, edit, restoreCopy, dismissCopy, updateCase } = useCaseDoc(
+  const { data, sections, status, loadError, conflict, edit, restoreMine, dismissConflict, updateCase } = useCaseDoc(
     caseId,
     onAuthLost,
   );
@@ -320,6 +323,7 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function flashCopied(id: string) {
@@ -396,16 +400,27 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
         {copied === 'failed' && <p className="error">Copy failed. Select the text and copy it by hand.</p>}
       </CaseRail>
       <div className="doc-main">
-      {replacedCopy && (
-        <p className="notice">
-          Another tab saved first. The server text is shown; your previous text is kept as a copy.{' '}
-          <button className="ghost" onClick={restoreCopy}>
-            Restore my text
-          </button>{' '}
-          <button className="ghost" onClick={dismissCopy}>
-            Dismiss
+      {conflict && (
+        <div className="notice" role="alert">
+          <p>
+            Another tab saved first, so its text is shown. Your edits to {conflict.keys.length === 1 ? 'this section were' : 'these sections were'}{' '}
+            not kept:
+          </p>
+          <ul>
+            {conflict.keys.map((k) => (
+              <li key={k}>
+                <strong>{SECTION_LABEL[k]}</strong>
+                <span className="muted"> {preview(conflict.mine[k])}</span>
+                <button className="ghost" onClick={() => restoreMine(k)}>
+                  Restore mine
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button className="ghost" onClick={dismissConflict}>
+            Keep the server text
           </button>
-        </p>
+        </div>
       )}
       <main className="doc-body">
         {SECTION_KEYS.map((key: SectionKey) => (

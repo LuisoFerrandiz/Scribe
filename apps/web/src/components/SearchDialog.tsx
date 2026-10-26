@@ -123,7 +123,6 @@ export function SearchDialog({
     }
   }
 
-  let lastGroup = '';
   return (
     <div className="search-overlay" onMouseDown={onClose}>
       <div className="search-box" role="dialog" aria-label="Search" onMouseDown={(e) => e.stopPropagation()}>
@@ -137,8 +136,7 @@ export function SearchDialog({
         />
         <ul ref={listRef}>
           {items.map((it, i) => {
-            const heading = it.group !== lastGroup ? it.group : null;
-            lastGroup = it.group;
+            const heading = it.group !== items[i - 1]?.group ? it.group : null;
             return (
               <li key={it.key}>
                 {heading && <div className="search-group">{heading}</div>}

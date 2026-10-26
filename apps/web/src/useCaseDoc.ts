@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, AuthError, api, serverError } from './api';
-import { clearCopy, readCachedCase, readCopy, readDraft, writeCachedCase, writeCopy, writeDraft } from './draftStore';
+import { clearCopy, readCachedCase, readDraft, writeCachedCase, writeCopy, writeDraft } from './draftStore';
+import { lostSections } from './conflict';
 import { SECTION_KEYS, type CaseFull, type SectionKey, type Sections } from './types';
 
 export type SaveStatus = 'saved' | 'saving' | 'offline' | 'failed';
@@ -25,10 +26,11 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [loadError, setLoadError] = useState('');
   // Text that another tab's save replaced; offered back once (RF-012).
-  const [replacedCopy, setReplacedCopy] = useState<Sections | null>(null);
+  const [conflict, setConflict] = useState<{ mine: Sections; keys: SectionKey[] } | null>(null);
 
   const text = useRef<Sections | null>(null);
   const stamp = useRef(''); // server updated_at the next save is based on
+  const base = useRef<Sections | null>(null); // the text the server is known to hold, to tell which sections I changed
   const edits = useRef(0); // counts edits, to tell whether text changed during a save
   const saving = useRef(false);
   const dirty = useRef(false);
@@ -50,6 +52,7 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
     try {
       const result = await api.saveDoc(caseId, stamp.current, sent);
       stamp.current = result.updated_at;
+      base.current = sent;
       const unchanged = edits.current === sentEdits;
       dirty.current = !unchanged;
       writeDraft(caseId, { sections: text.current, base: stamp.current, dirty: dirty.current });
@@ -71,18 +74,21 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
     }
   }
 
-  // Another tab saved first: show the server text, keep ours as a copy, tell the user once.
+  // Another tab saved first: show the server text. The sections I had changed that it replaced are
+  // offered back one by one (never all at once), and kept as a copy on this device.
   function takeServerText(server: CaseFull) {
     const mine = text.current!;
     const theirs = sectionsOf(server);
+    const keys = lostSections(mine, theirs, base.current ?? theirs);
     stamp.current = server.updated_at;
+    base.current = theirs;
     edits.current++;
     dirty.current = false;
     text.current = theirs;
     writeDraft(caseId, { sections: theirs, base: stamp.current, dirty: false });
-    if (!sameSections(mine, theirs)) {
+    if (keys.length > 0) {
       writeCopy(caseId, mine);
-      if (alive.current) setReplacedCopy(mine);
+      if (alive.current) setConflict({ mine, keys });
     }
     if (alive.current) {
       setSections(theirs);
@@ -99,6 +105,7 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
       const draft = readDraft(caseId);
       let initial = server;
       stamp.current = c.updated_at;
+      base.current = server;
       dirty.current = false;
 
       if (draft?.dirty && !sameSections(draft.sections, server)) {
@@ -110,7 +117,8 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
         } else {
           // The server moved on since this draft was written: keep the draft as a copy.
           writeCopy(caseId, draft.sections);
-          setReplacedCopy(draft.sections);
+          const keys = lostSections(draft.sections, server, server);
+          if (keys.length > 0) setConflict({ mine: draft.sections, keys });
         }
       }
       text.current = initial;
@@ -171,20 +179,23 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
     [caseId, schedule],
   );
 
-  const restoreCopy = useCallback(() => {
-    const copy = replacedCopy ?? readCopy(caseId);
-    if (!copy) return;
-    text.current = copy;
-    edits.current++;
-    dirty.current = true;
-    setSections(copy);
-    writeDraft(caseId, { sections: copy, base: stamp.current, dirty: true });
-    clearCopy(caseId);
-    setReplacedCopy(null);
-    schedule(0);
-  }, [caseId, replacedCopy, schedule]);
+  // Puts back ONE of my sections, by an explicit click; the others stay as the server has them.
+  const restoreMine = useCallback(
+    (key: SectionKey) => {
+      if (!conflict) return;
+      edit(key, conflict.mine[key]);
+      const keys = conflict.keys.filter((k) => k !== key);
+      if (keys.length === 0) {
+        clearCopy(caseId);
+        setConflict(null);
+      } else {
+        setConflict({ ...conflict, keys });
+      }
+    },
+    [caseId, conflict, edit],
+  );
 
-  const dismissCopy = useCallback(() => setReplacedCopy(null), []);
+  const dismissConflict = useCallback(() => setConflict(null), []);
 
   // Case data changed outside the document (accepted protest form): only these fields are merged,
   // so the text and its save stamp are never touched.
@@ -199,5 +210,5 @@ export function useCaseDoc(caseId: number, onAuthLost: () => void) {
     [],
   );
 
-  return { data, sections, status, loadError, replacedCopy, edit, restoreCopy, dismissCopy, updateCase };
+  return { data, sections, status, loadError, conflict, edit, restoreMine, dismissConflict, updateCase };
 }
