@@ -12,9 +12,20 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
     volumes:
-      - /DATA/Proyectos/Scribe_helper_v2/data:/data # constitution.md: all data, and the complete backup
+      # constitution.md: all data, and the complete backup. The folder must already hold, from this repo's data/:
+      #   phrases/base/*.md  the base phrases (edited by hand; without them the app starts with no phrases)
+      #   rules/rrs/ and originals/  the RRS text and PDFs (without them the app starts with no RRS)
+      # data/db is created on first start. Set DATA_PATH to use another folder.
+      - ${DATA_PATH:-/DATA/Proyectos/Scribe_helper_v2/data}:/data
     ports:
       - "${API_PORT:-3001}:3000"
+    healthcheck:
+      # Portainer shows "unhealthy" instead of a silent restart loop (for example a bad data folder).
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s # first start applies the schema and indexes the RRS
     restart: unless-stopped
 
   web:
@@ -31,5 +42,6 @@ services:
     ports:
       - "${WEB_HTTP_PORT:-8087}:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped

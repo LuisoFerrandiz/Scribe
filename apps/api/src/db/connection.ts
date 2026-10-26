@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { config } from '../config.js';
@@ -10,6 +11,9 @@ import { config } from '../config.js';
 // source when no prebuilt binary matches the Node version, which failed in
 // this environment (no Visual Studio). See DECISIONS.md D-016.
 const dbPath = path.join(config.dataDir, 'db', 'scribe_helper.sqlite');
+
+// A fresh data folder (a new server volume, a clone: data/db is not in git) has no db folder yet.
+mkdirSync(path.dirname(dbPath), { recursive: true });
 
 export const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA journal_mode = WAL');

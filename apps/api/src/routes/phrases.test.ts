@@ -15,7 +15,7 @@ const as = (role: string) => ({ 'x-role': role });
 const write = (text: string) => writeFileSync(path.join(phrasesDir, 'c.md'), text, 'utf-8');
 
 beforeAll(async () => {
-  mkdirSync(path.join(dataDir, 'db'), { recursive: true });
+  // No data/db here on purpose: opening the database creates it (fresh server volume).
   mkdirSync(phrasesDir, { recursive: true });
   const { db } = await import('../db/connection.js');
   db.exec(readFileSync(path.join(import.meta.dirname, '..', '..', 'db', 'schema.sql'), 'utf-8'));
