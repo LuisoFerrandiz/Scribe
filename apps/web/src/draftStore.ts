@@ -47,3 +47,31 @@ export function clearCopy(caseId: number) {
 // Last case data loaded from the server, so the page can reopen with no network.
 export const readCachedCase = (caseId: number) => read<CaseFull>(caseKey(caseId));
 export const writeCachedCase = (c: CaseFull) => write(caseKey(c.id), c);
+
+// A deleted case leaves nothing behind on this device.
+export function clearCaseLocal(caseId: number) {
+  try {
+    for (const key of [draftKey(caseId), copyKey(caseId), caseKey(caseId)]) window.localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+// Comfort preference, never critical state: the case panel folded or not (SPEC-003). Any failure
+// means "show the panel".
+const RAIL_KEY = 'scribe.rail';
+export function readRailCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(RAIL_KEY) === 'collapsed';
+  } catch {
+    return false;
+  }
+}
+export function writeRailCollapsed(collapsed: boolean) {
+  try {
+    if (collapsed) window.localStorage.setItem(RAIL_KEY, 'collapsed');
+    else window.localStorage.removeItem(RAIL_KEY);
+  } catch {
+    /* storage unavailable: the choice lasts until the page is closed */
+  }
+}

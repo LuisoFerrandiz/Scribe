@@ -48,3 +48,12 @@ and return to the document with nothing lost.
 
 A-6 as built: after a 409 the server text is shown and only the sections THIS tab changed (and the server replaced) are listed
 with a "Restore mine" button each; a section only the other tab changed is never offered. Pure logic in `conflict.ts`.
+
+## Added by the owner's order (2026-10-26)
+- **A-7 Delete cases (done).** "Delete" on each row of the case list, in two clicks in place ("Delete case X and its
+  text?" then "Delete case"; Cancel keeps it). The server removes the case, parties, witnesses, attachment rows and the
+  attached protest form files; the browser drops its local copy of the case. No undo.
+- **A-8 Event documents screen (done).** `#/documents`, from the case list ("Event documents"): choose the event, upload
+  a NoR, SI, class rules or an amendment, see how many numbered rules were found (NoR 1.1, SI 12, CR 3.2...), then
+  Accept (searchable and citable) or Reject. Accepted documents can be deleted. Uses the existing /resources routes
+  (admin only); without this screen the "Event documents" group of Ctrl+K was always empty.

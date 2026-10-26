@@ -16,8 +16,10 @@ buscar en las fuentes (protest form, frases, RRS, normas de evento y clase).
 - Chat en español; producto, código y comentarios en inglés. Commits en español sin tildes y **sin
   `Co-Authored-By`**.
 - **Nunca commit ni push sin orden del dueño en ese intercambio.** Un commit por bloque.
-- Spec-Driven: `specs/SPEC-NNN-*.md`, `-plan.md`, `-tasks.md`. Antes de añadir una función, pasa el
-  test de deriva: ¿quita tecleo real del escribano? ¿qué se quita a cambio?
+- Spec-Driven con revisión (`specs/METODO.md`): spec → plan → tareas → **revisión** (`-review.md`) → implementar.
+  Si la revisión rechaza, se vuelve al paso que falla y se repite (máx. 3 rondas, luego se pregunta al dueño);
+  no se escribe código antes de que la revisión apruebe. Antes de añadir una función, pasa el test de deriva:
+  ¿quita tecleo real del escribano? ¿qué se quita a cambio?
 - Decisiones significativas en `DECISIONS.md` (solo se añade, no se edita). `CLAUDE.md` solo se edita
   cuando el dueño lo ordena.
 - Nunca teclear credenciales de producción, nunca pedir ni imprimir `ANTHROPIC_API_KEY`.

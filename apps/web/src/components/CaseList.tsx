@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AuthError, api, serverError } from '../api';
 import { go } from '../App';
+import { clearCaseLocal } from '../draftStore';
+import { ConfirmButton } from './ConfirmButton';
 import type { CaseSummary, SessionUser } from '../types';
 
 const KIND_LABEL: Record<string, string> = { protest: 'Protest', redress: 'Redress', reopening: 'Reopening' };
@@ -24,11 +26,26 @@ export function CaseList({
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(serverError(e))));
   }, [onAuthLost]);
 
+  async function remove(id: number) {
+    setError('');
+    try {
+      await api.deleteCase(id);
+      clearCaseLocal(id);
+      setCases((list) => list?.filter((c) => c.id !== id) ?? null);
+    } catch (e) {
+      if (e instanceof AuthError) onAuthLost();
+      else setError(serverError(e));
+    }
+  }
+
   return (
     <main className="page">
       <header className="bar">
         <h1>Cases</h1>
         <span className="spacer" />
+        <button className="ghost" onClick={() => go('#/documents')}>
+          Event documents
+        </button>
         <button onClick={() => go('#/new')}>New case</button>
         <button className="ghost" onClick={onLogout} title={user.username}>
           Sign out
@@ -54,6 +71,12 @@ export function CaseList({
               <span className="muted">{c.kinds.split(',').map((k) => KIND_LABEL[k] ?? k).join(' + ')}</span>
               <span className="muted">{c.hearing_at ? c.hearing_at.replace('T', ' ') : ''}</span>
             </a>
+            <ConfirmButton
+              label="Delete"
+              question={`Delete case ${c.case_number} and its text?`}
+              confirmLabel="Delete case"
+              onConfirm={() => void remove(c.id)}
+            />
           </li>
         ))}
       </ul>

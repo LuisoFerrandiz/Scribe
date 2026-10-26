@@ -60,3 +60,15 @@ búsqueda de reglas se escribe nueva en T5). Se borra `resources/migrateClassRul
 **Verificado.** `npm run build` limpio. Servidor local con BD de prueba: `/health` ok, login, búsqueda de
 frases (`withdrawn` en `decision` devuelve las frases de retirada), `/resources` con el RRS, y `/phrases` sin
 sesión devuelve 401.
+
+## D-005 — Revisión obligatoria entre las tareas y el código (2026-10-26)
+
+**Decisión.** El método pasa a ser spec → plan → tareas → revisión → implementar. La revisión se hace con la lista de
+`specs/METODO.md` y deja un veredicto (APROBADA o RECHAZADA) en `SPEC-NNN-review.md`. Si rechaza, se vuelve al paso que
+falla y se repite; máximo 3 rondas y después se pregunta al dueño. No se escribe código antes de que apruebe.
+
+**Por qué.** Lo pidió el dueño. Hasta SPEC-003 se implementaba justo después de las tareas; una revisión previa encuentra
+antes los choques con lo ya pedido (por ejemplo, esconder a la vez botones que el dueño había pedido).
+
+**Alcance.** Cambios de comportamiento o pantallas nuevas. Los ajustes mínimos (texto, color, error evidente) se anotan en
+SPEC-002 o en el commit sin spec.

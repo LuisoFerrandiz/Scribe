@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { copyText, fullText } from '../docFormat';
+import { readRailCollapsed, writeRailCollapsed } from '../draftStore';
 import { ReadingView } from './ReadingView';
 import { CaseDataPanel } from './CaseDataPanel';
 import { ProtestFormDialog } from './ProtestFormDialog';
@@ -36,13 +37,75 @@ const partyText = (p: PartyRow) =>
 // The case, kept beside the document: where the scribe is, whether it is saved, who is involved, and
 // the few things to do besides writing. Parties scroll inside the rail, so many parties never push
 // the document down.
-function CaseRail({ c, status, children }: { c: CaseFull; status: SaveStatus; children?: ReactNode }) {
+function CaseRail({
+  c,
+  status,
+  collapsed,
+  onToggle,
+  onSearch,
+  onReading,
+  children,
+}: {
+  c: CaseFull;
+  status: SaveStatus;
+  collapsed: boolean;
+  onToggle: () => void;
+  onSearch: () => void;
+  onReading: () => void;
+  children?: ReactNode;
+}) {
   const kinds = c.kinds.split(',').map((k) => KIND_LABEL[k] ?? k).join(' + ');
+  // The save state is the one thing that never hides: folded, it stays as a coloured dot.
+  if (collapsed) {
+    return (
+      <aside className="rail collapsed">
+        <button
+          className="rail-toggle"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onToggle}
+          aria-label="Show case panel"
+          aria-expanded={false}
+          title="Show case panel"
+        >
+          »
+        </button>
+        <button className="rail-icon" onMouseDown={(e) => e.preventDefault()} onClick={onSearch} aria-label="Search" title="Search (Ctrl+K)">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.5" />
+            <path d="M12.8 12.8 18 18" />
+          </svg>
+        </button>
+        <button className="rail-icon" onMouseDown={(e) => e.preventDefault()} onClick={onReading} aria-label="Reading" title="Reading (F2)">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 4h5.5a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 0-1.5-1.5H3z" />
+            <path d="M17 4h-5.5A1.5 1.5 0 0 0 10 5.5V17a1.5 1.5 0 0 1 1.5-1.5H17z" />
+          </svg>
+        </button>
+        {/* A fault changes the shape (an exclamation mark), not only the colour. */}
+        <span className={`status status-${status}`} role="status" aria-label={STATUS_LABEL[status]} title={STATUS_LABEL[status]}>
+          {status === 'offline' || status === 'failed' ? <span className="bang" aria-hidden="true">!</span> : <span className="dot" aria-hidden="true" />}
+        </span>
+        <span className="rail-case">Case {c.case_number}</span>
+      </aside>
+    );
+  }
   return (
     <aside className="rail">
-      <a href="#/" className="rail-back">
-        ← Cases
-      </a>
+      <div className="rail-top">
+        <a href="#/" className="rail-back">
+          ← Cases
+        </a>
+        <button
+          className="rail-toggle"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onToggle}
+          aria-label="Hide case panel"
+          aria-expanded={true}
+          title="Hide case panel"
+        >
+          «
+        </button>
+      </div>
       <h1>Case {c.case_number}</h1>
       <p className="rail-meta">
         {c.event_name}
@@ -274,6 +337,15 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
   const [formAt, setFormAt] = useState<{ key: SectionKey; start: number; end: number } | null>(null);
   const formRef = useRef(formAt);
   formRef.current = formAt;
+  // Case panel folded or not (SPEC-003), remembered on this browser.
+  const [railCollapsed, setRailCollapsed] = useState(readRailCollapsed);
+  function toggleRail() {
+    setRailCollapsed((v) => {
+      writeRailCollapsed(!v);
+      return !v;
+    });
+  }
+
   // Case data panel (SPEC-002 A-3): beside the document, not over it.
   const [panelOpen, setPanelOpen] = useState(false);
   const panelAt = useRef<{ key: SectionKey; start: number; end: number } | null>(null);
@@ -390,8 +462,12 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
   if (!data || !sections) return <div className="center muted">Loading…</div>;
 
   return (
-    <div className={`doc${panelOpen ? ' with-panel' : ''}`}>
-      <CaseRail c={data} status={status}>
+    <div className={`doc${panelOpen ? ' with-panel' : ''}${railCollapsed ? ' rail-collapsed' : ''}`}>
+      <CaseRail c={data} status={status} collapsed={railCollapsed}
+        onToggle={toggleRail}
+        onSearch={openSearch}
+        onReading={toggleReading}
+      >
         <Tool label="Search" hint="Ctrl+K" onClick={openSearch} />
         <Tool label="Reading" hint="F2" onClick={toggleReading} />
         <Tool label={`Case data${dataDirty ? ' •' : ''}`} onClick={panelOpen ? closePanel : openPanel} />
@@ -451,7 +527,7 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
         onDirtyChange={setDataDirty}
         onAuthLost={onAuthLost}
       />
-      {reading && <ReadingView c={data} sections={sections} />}
+      {reading && <ReadingView sections={sections} />}
       {formAt && <ProtestFormDialog c={data} onApply={updateCase} onClose={closeForm} onAuthLost={onAuthLost} />}
       {searchAt && <SearchDialog caseId={caseId} onPick={pickFromSearch} onClose={closeSearch} />}
     </div>

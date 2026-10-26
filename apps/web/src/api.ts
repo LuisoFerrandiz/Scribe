@@ -7,6 +7,8 @@ import type {
   Kind,
   NewCaseInput,
   PartyRow,
+  ResourceDetail,
+  ResourceRow,
   SearchResponse,
   Sections,
   SessionUser,
@@ -108,6 +110,13 @@ export const api = {
   },
   deleteAttachment: (id: number) => request<void>(`/attachments/${id}`, { method: 'DELETE' }),
   extract: (caseId: number) => request<Extraction>(`/cases/${caseId}/extract`, { method: 'POST' }),
+  deleteCase: (id: number) => request<void>(`/cases/${id}`, { method: 'DELETE' }),
+  listRules: () => request<ResourceRow[]>('/resources?kind=rule'),
+  getResource: (id: number) => request<ResourceDetail>(`/resources/${id}`),
+  uploadResource: (form: FormData) => request<ResourceRow>('/resources', { method: 'POST', body: form }),
+  acceptResource: (id: number) => request<ResourceRow>(`/resources/${id}/accept`, { method: 'POST' }),
+  rejectResource: (id: number) => request<void>(`/resources/${id}/reject`, { method: 'POST' }),
+  deleteResource: (id: number) => request<void>(`/resources/${id}`, { method: 'DELETE' }),
   setWitnesses: (caseId: number, witnesses: { name: string; supports_party_id: number | null }[]) =>
     send<WitnessRow[]>('PUT', `/cases/${caseId}/witnesses`, { witnesses }),
 };

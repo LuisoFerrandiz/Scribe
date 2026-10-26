@@ -3,14 +3,16 @@ import { ApiError, AuthError, api } from './api';
 import type { SessionUser } from './types';
 import { Login } from './components/Login';
 import { CaseList } from './components/CaseList';
+import { Documents } from './components/Documents';
 import { NewCase } from './components/NewCase';
 import { CaseView } from './components/CaseView';
 
-// Hash routes: "#/" list, "#/new" new case, "#/case/12" document.
-type Route = { name: 'list' } | { name: 'new' } | { name: 'case'; id: number };
+// Hash routes: "#/" list, "#/new" new case, "#/documents" event documents, "#/case/12" document.
+type Route = { name: 'list' } | { name: 'new' } | { name: 'documents' } | { name: 'case'; id: number };
 
 function parseRoute(hash: string): Route {
   if (hash === '#/new') return { name: 'new' };
+  if (hash === '#/documents') return { name: 'documents' };
   const m = /^#\/case\/(\d+)$/.exec(hash);
   if (m) return { name: 'case', id: Number(m[1]) };
   return { name: 'list' };
@@ -83,6 +85,7 @@ export function App() {
         />
       )}
       {route.name === 'new' && <NewCase onAuthLost={onAuthLost} />}
+      {route.name === 'documents' && <Documents onAuthLost={onAuthLost} />}
       {route.name === 'case' && <CaseView key={route.id} caseId={route.id} onAuthLost={onAuthLost} />}
     </div>
   );

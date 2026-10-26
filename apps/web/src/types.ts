@@ -112,3 +112,23 @@ export interface SuggestResponse {
   phrase: { id: number; label: string; body: string } | null;
   rule: { citation: string; heading: string; doc_title: string; typed?: boolean } | null;
 }
+
+// Event documents (NoR, SIs, class rules and their amendments): uploaded, reviewed, then searchable.
+export type DocType = 'nor' | 'si' | 'class' | 'nor_amendment' | 'si_amendment' | 'class_amendment';
+
+export interface ResourceRow {
+  id: number;
+  kind: 'rule' | 'example';
+  layer: 'rrs' | 'class' | 'event' | null;
+  event_id: number | null;
+  title: string;
+  original_filename: string;
+  status: 'pending_review' | 'accepted';
+  conversion_empty: 0 | 1;
+  doc_type: DocType | null;
+  created_at: string;
+}
+
+export interface ResourceDetail extends ResourceRow {
+  sectionsPreview: { count: number; sample: string[] } | null;
+}

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db/connection.js';
 import { inTransaction } from '../db/transaction.js';
+import { deleteAttachmentFiles } from '../case-attachments/storage.js';
 
 const KINDS = ['protest', 'redress', 'reopening'] as const;
 const ROLES = ['protestor', 'respondent', 'other'] as const;
@@ -160,10 +161,16 @@ export function registerCaseRoutes(app: FastifyInstance) {
     return fullCase(row.id);
   });
 
-  app.delete('/cases/:id', (req, reply) => {
+  // Deletes the case with its parties, witnesses and attachment rows (cascade) and the attached
+  // protest form files on disk. There is no undo.
+  app.delete('/cases/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
     if (!caseById(id)) return reply.code(404).send({ error: 'not found' });
+    const files = db
+      .prepare('SELECT original_path, markdown_path FROM case_attachment WHERE case_id = ?')
+      .all(id) as { original_path: string; markdown_path: string | null }[];
     db.prepare('DELETE FROM protest_case WHERE id = ?').run(id);
+    for (const f of files) await deleteAttachmentFiles({ originalPath: f.original_path, markdownPath: f.markdown_path });
     reply.code(204).send();
   });
 

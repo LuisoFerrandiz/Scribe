@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Fastify from 'fastify';
@@ -102,6 +102,37 @@ describe('cases', () => {
     const res = await app.inject({ method: 'PUT', url: `/cases/${c.id}/parties`, payload: { parties } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(41);
+  });
+});
+
+describe('deleting a case', () => {
+  it('removes the case, its people and its attached files', async () => {
+    const c = (await newCase('del')).json();
+    const { db } = await import('../db/connection.js');
+    const dir = path.join(dataDir, 'case_attachments');
+    mkdirSync(dir, { recursive: true });
+    const original = path.join('case_attachments', 'form.pdf');
+    const markdown = path.join('case_attachments', 'form.md');
+    writeFileSync(path.join(dataDir, original), 'x');
+    writeFileSync(path.join(dataDir, markdown), 'x');
+    db.prepare('INSERT INTO case_attachment (case_id, original_filename, original_path, markdown_path) VALUES (?, ?, ?, ?)').run(
+      c.id,
+      'form.pdf',
+      original,
+      markdown,
+    );
+
+    const res = await app.inject({ method: 'DELETE', url: `/cases/${c.id}` });
+    expect(res.statusCode).toBe(204);
+    expect((await app.inject({ url: `/cases/${c.id}` })).statusCode).toBe(404);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM party WHERE case_id = ?').get(c.id)).toMatchObject({ n: 0 });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM case_attachment WHERE case_id = ?').get(c.id)).toMatchObject({ n: 0 });
+    expect(existsSync(path.join(dataDir, original))).toBe(false);
+    expect(existsSync(path.join(dataDir, markdown))).toBe(false);
+  });
+
+  it('answers 404 for a case that does not exist', async () => {
+    expect((await app.inject({ method: 'DELETE', url: '/cases/999999' })).statusCode).toBe(404);
   });
 });
 
