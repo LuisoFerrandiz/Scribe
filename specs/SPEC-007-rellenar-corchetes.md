@@ -1,6 +1,6 @@
 # SPEC-007 — Rellenar los corchetes de las frases
 
-Estado: EN REVISIÓN (2026-10-26). Origen: petición del dueño. Regla general que la gobierna: **ante la duda, dejarlo como
+Estado: HECHA (2026-10-26), revisada (SPEC-007-review.md, ronda 2 APROBADA) y verificada. Origen: petición del dueño. Regla general que la gobierna: **ante la duda, dejarlo como
 está** (CLAUDE.md, D-007).
 
 ## Problema

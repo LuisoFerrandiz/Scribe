@@ -2,7 +2,7 @@
 
 ### Withdraw the Protest
 box: facts_found
-[Y] [The RC] [The TC] [The PC] requested  to withdraw the protest.
+[Y|The RC|The TC|The PC] requested  to withdraw the protest.
 
 ### Withdraw the Protest
 box: conclusion
@@ -18,7 +18,7 @@ The protest committee allows the protest to be withdrawn under 63.2(a)
 
 ### Withdraw the Request for Redress
 box: facts_found
-[Y] [The RC] [The TC] [The PC] requested to withdraw the request for redress.
+[Y|The RC|The TC|The PC] requested to withdraw the request for redress.
 
 ### Withdraw the Request for Redress
 box: conclusion
@@ -34,7 +34,7 @@ The protest committee allows the request for redress to be withdrawn under 63.2(
 
 ### Arbitration
 box: facts_found
-[Y] asked to withdraw the protest.
+{Y} asked to withdraw the protest.
 
 ### Arbitration
 box: conclusion

@@ -38,10 +38,10 @@ The evidence that Y plans to present is new and might be significant. Therefore,
 Decision
 
 ### Request to reopen invalid
-X’s request to reopen Hearing No. [##] is invalid.
+X’s request to reopen Hearing No. {##} is invalid.
 
 ### Reopening denied
-Hearing No. [##] will not be reopened.
+Hearing No. {##} will not be reopened.
 
 ### Hearing [##] reopened
-Hearing No. [##] will be reopened.
+Hearing No. {##} will be reopened.

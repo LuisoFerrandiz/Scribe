@@ -7,6 +7,8 @@ import { CaseDataPanel } from './CaseDataPanel';
 import { ProtestFormDialog } from './ProtestFormDialog';
 import { SearchDialog } from './SearchDialog';
 import { matchData } from '../dataMatch';
+import { offersFor, type FillCase } from '../fillData';
+import { blockAfterEdit, findMarks, nextMark, replaceMark, type Block } from '../fillMarks';
 import { applySuggestion, suggestionText } from '../suggestQuery';
 import { useSuggestion } from '../useSuggestion';
 import { useCaseDoc, type SaveStatus } from '../useCaseDoc';
@@ -170,6 +172,7 @@ interface SectionProps {
   label: string;
   value: string;
   terms: string[];
+  fillCase: FillCase | null;
   onChange: (v: string) => void;
   onFocusSection: () => void;
   copied: boolean;
@@ -177,7 +180,7 @@ interface SectionProps {
 }
 
 const Section = forwardRef<SectionHandle, SectionProps>(function Section(
-  { caseId, sectionKey, label, value, terms, onChange, onFocusSection, copied, onCopy },
+  { caseId, sectionKey, label, value, terms, fillCase, onChange, onFocusSection, copied, onCopy },
   handleRef,
 ) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -185,6 +188,10 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
   // Where Esc dismissed a suggestion; typing anything changes the length and brings it back.
   const [dismissed, setDismissed] = useState<{ caret: number; length: number } | null>(null);
   const pendingCaret = useRef<number | null>(null);
+  // SPEC-007: the block of a phrase just inserted whose marks are being filled in, and what to select once the text changes.
+  const [fill, setFill] = useState<Block | null>(null);
+  const [selEnd, setSelEnd] = useState(0);
+  const pendingSel = useRef<{ start: number; end: number } | null>(null);
   const composing = useRef(false);
   const [focused, setFocused] = useState(false);
 
@@ -194,11 +201,69 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-    if (pendingCaret.current !== null) {
+    if (pendingSel.current) {
+      const { start, end } = pendingSel.current;
+      el.setSelectionRange(start, end);
+      setCaret(start);
+      setSelEnd(end);
+      pendingSel.current = null;
+    } else if (pendingCaret.current !== null) {
       el.setSelectionRange(pendingCaret.current, pendingCaret.current);
       pendingCaret.current = null;
     }
   }, [value]);
+
+  // A change that did not come through the keys below (a restored section, another tab) leaves the block stale.
+  useEffect(() => {
+    if (fill && fill.end > value.length) setFill(null);
+  }, [fill, value]);
+
+  // RF-002: a phrase with marks starts the fill-in on the text it brought, with the first mark selected.
+  function openFill(text: string, start: number, end: number) {
+    const first = findMarks(text, start, end)[0];
+    if (!first) return setFill(null);
+    setFill({ start, end });
+    pendingSel.current = { start: first.start, end: first.end };
+  }
+
+  // The mark under the selection, the offers for it and the marks left in the block.
+  const marksLeft = fill ? findMarks(value, fill.start, fill.end) : [];
+  const current = fill ? marksLeft.find((m) => m.start === caret && m.end === selEnd) : undefined;
+  const offers = current && fillCase ? offersFor(current, fillCase) : [];
+
+  function finishFill(at: Block) {
+    ref.current?.setSelectionRange(at.end, at.end);
+    setCaret(at.end);
+    setSelEnd(at.end);
+    setFill(null);
+  }
+
+  // Writes `text` in place of the selected mark and moves to the next one; with none left the block is done.
+  function resolveCurrent(text: string) {
+    if (!fill || !current) return;
+    const nextText = replaceMark(value, current, text);
+    const block = { start: fill.start, end: fill.end + text.length - (current.end - current.start) };
+    const next = nextMark(nextText, block, current.start);
+    onChange(nextText);
+    if (next) {
+      setFill(block);
+      pendingSel.current = { start: next.start, end: next.end };
+    } else {
+      setFill(null);
+      pendingSel.current = { start: block.end, end: block.end };
+    }
+  }
+
+  // Tab: accept the one offer a datum has; otherwise leave this mark as it is and go to the next.
+  function advance() {
+    if (!fill) return;
+    if (current?.kind === 'hole' && offers.length === 1) return resolveCurrent(offers[0].text);
+    const next = nextMark(value, fill, selEnd);
+    if (!next) return finishFill(fill);
+    ref.current?.setSelectionRange(next.start, next.end);
+    setCaret(next.start);
+    setSelEnd(next.end);
+  }
 
   // RF-004: only at the end of a word, so the grey text never sits over typed text.
   const ghost = useMemo(() => {
@@ -210,7 +275,7 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
     return matchData(value.slice(0, caret), terms);
   }, [value, caret, terms, dismissed]);
 
-  const [suggestion, clearSuggestion] = useSuggestion(caseId, sectionKey, value, caret, focused && !ghost);
+  const [suggestion, clearSuggestion] = useSuggestion(caseId, sectionKey, value, caret, focused && !ghost && !fill);
 
   useImperativeHandle(
     handleRef,
@@ -228,7 +293,10 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
         pendingCaret.current = next.caret;
         onChange(next.value);
         setCaret(next.caret);
+        setSelEnd(next.caret);
         clearSuggestion();
+        if (s.kind === 'phrase') openFill(next.value, next.caret - suggestionText(s).length, next.caret);
+        else setFill(null);
         ref.current?.focus();
       },
     }),
@@ -239,6 +307,24 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
   // line. With neither visible they keep their normal meaning.
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.nativeEvent.isComposing) return;
+    if (fill && !ghost) {
+      // Alt alone: AltGr arrives as Ctrl+Alt on a Spanish keyboard and types symbols.
+      const digit = /^Digit([1-9])$/.exec(e.code);
+      if (digit && e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const offer = offers[Number(digit[1]) - 1];
+        if (offer) resolveCurrent(offer.text);
+        return;
+      }
+      if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        return advance();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        return setFill(null);
+      }
+    }
     if (e.key === 'Tab' && !e.shiftKey) {
       if (ghost) {
         e.preventDefault();
@@ -251,7 +337,9 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
         pendingCaret.current = next.caret;
         onChange(next.value);
         setCaret(next.caret);
+        setSelEnd(next.caret);
         clearSuggestion();
+        if (suggestion.kind === 'phrase') openFill(next.value, next.caret - suggestionText(suggestion).length, next.caret);
       }
     } else if (e.key === 'Escape') {
       if (ghost) {
@@ -284,9 +372,19 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
           value={value}
           onChange={(e) => {
             setCaret(e.target.selectionStart);
+            setSelEnd(e.target.selectionEnd);
+            if (fill) {
+              const block = blockAfterEdit(value, e.target.value, fill);
+              setFill(block && findMarks(e.target.value, block.start, block.end).length > 0 ? block : null);
+            }
             onChange(e.target.value);
           }}
-          onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
+          onSelect={(e) => {
+            const { selectionStart: a, selectionEnd: b } = e.currentTarget;
+            setCaret(a);
+            setSelEnd(b);
+            if (fill && (a < fill.start || b > fill.end)) setFill(null);
+          }}
           onKeyDown={onKeyDown}
           onCompositionStart={() => (composing.current = true)}
           onCompositionEnd={(e) => {
@@ -297,7 +395,10 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
             setFocused(true);
             onFocusSection();
           }}
-          onBlur={() => setFocused(false)}
+          onBlur={() => {
+            setFocused(false);
+            setFill(null);
+          }}
           lang="en"
           spellCheck
           rows={3}
@@ -306,7 +407,14 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
       </div>
       {/* Fixed height so a suggestion appearing never moves the text being written. */}
       <div className="suggest-line" aria-live="off">
-        {focused && suggestion && (
+        {focused && fill && (
+          <>
+            <span className="tag">Fill</span>
+            <span className="text">{fillLine(current?.kind, offers)}</span>
+            <span className="hint">Tab</span>
+          </>
+        )}
+        {focused && !fill && suggestion && (
           <>
             <span className="tag">{suggestion.kind === 'phrase' ? 'Phrase' : 'Rule'}</span>
             <span className="text">{suggestionText(suggestion)}</span>
@@ -319,6 +427,16 @@ const Section = forwardRef<SectionHandle, SectionProps>(function Section(
     </section>
   );
 });
+
+// The line under the box while marks are being filled in: what the keys do for the mark that is selected.
+const OPTION_CHARS = 28;
+function fillLine(kind: 'choice' | 'hole' | undefined, offers: { label: string }[]): string {
+  const short = (t: string) => (t.length > OPTION_CHARS ? `${t.slice(0, OPTION_CHARS - 1)}…` : t);
+  if (kind === 'hole' && offers.length === 1) return `Tab writes ${short(offers[0].label)}  ·  Esc stop`;
+  if (offers.length > 0) return `${offers.map((o, i) => `Alt+${i + 1} ${short(o.label)}`).join('   ')}  ·  Tab skip  ·  Esc stop`;
+  if (kind === 'hole') return 'Type the value  ·  Tab skip  ·  Esc stop';
+  return 'Tab next mark  ·  Esc stop';
+}
 
 // The start of a section's text, for the conflict notice.
 const preview = (t: string) => (t.trim().length > 70 ? `${t.trim().slice(0, 70)}…` : t.trim() || '(empty)');
@@ -457,6 +575,13 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
     return [...new Set(all.map((t) => t.trim()).filter((t) => t.length > 2))];
   }, [data]);
 
+  // What the case knows, for the data marks of a phrase (SPEC-007).
+  const fillCase = useMemo<FillCase | null>(
+    () =>
+      data ? { case_number: data.case_number, race: data.race ?? '', hearing_at: data.hearing_at, parties: data.parties } : null,
+    [data],
+  );
+
   if (loadError) {
     return (
       <main className="page">
@@ -518,6 +643,7 @@ export function CaseView({ caseId, onAuthLost }: { caseId: number; onAuthLost: (
             label={SECTION_LABEL[key]}
             value={sections[key]}
             terms={terms}
+            fillCase={fillCase}
             onChange={(v) => edit(key, v)}
             copied={copied === key}
             onCopy={() => copy(key, sections[key].trim())}
