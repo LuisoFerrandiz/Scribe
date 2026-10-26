@@ -27,7 +27,8 @@ buscar en las fuentes (protest form, frases, RRS, normas de evento y clase).
 
 ## Límites no negociables (heredados)
 Nada se cita si no está en el corpus. Nada se inserta sin una acción explícita del usuario. Sugerencia
-vacía antes que confiada e incorrecta. La API key nunca llega al navegador. Todos los datos bajo
+vacía antes que confiada e incorrecta. **Ante la duda, dejarlo como está:** si el sistema no sabe qué hacer con
+un dato, un corchete o un texto, no lo cambia, no lo rellena y no lo borra. La API key nunca llega al navegador. Todos los datos bajo
 `data/`; configuración por variables de entorno; servidor en `0.0.0.0`; zona horaria por configuración.
 
 ## Comandos y despliegue

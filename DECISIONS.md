@@ -85,3 +85,13 @@ la fuente de frases de D-022 (proyecto anterior) y de SPEC-005 (siembra única).
 transformar para poder rellenar los corchetes en una spec posterior.
 
 **Alcance.** Solo las frases `base`; las `own` no se tocan. Rellenar corchetes y una pantalla para frases propias quedan fuera.
+
+## D-007 — Regla general: ante la duda, dejarlo como está (2026-10-26)
+
+**Decisión.** Si el sistema no sabe qué hacer con un dato, un corchete o un texto, lo deja como está: no lo cambia,
+no lo rellena y no lo borra. Se añade a los límites no negociables de `CLAUDE.md`.
+
+**Por qué.** Lo pidió el dueño al diseñar el rellenado de corchetes de las frases (SPEC-007): un corchete mal entendido
+no debe quedar escrito de forma equivocada en una decisión. Complementa "sugerencia vacía antes que confiada e incorrecta".
+
+**Alcance.** Todo el producto. Cualquier marca, dato o texto que no se reconozca queda tal cual.
