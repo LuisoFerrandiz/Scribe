@@ -34,7 +34,7 @@ The protest committee allows the request for redress to be withdrawn under 63.2(
 
 ### Arbitration
 box: facts_found
-Y asked to withdraw the protest.
+[Y] asked to withdraw the protest.
 
 ### Arbitration
 box: conclusion
