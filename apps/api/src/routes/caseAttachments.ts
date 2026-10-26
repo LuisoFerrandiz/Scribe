@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { db } from '../db/connection.js';
+import { ExtractError, extractFromAttachments } from '../ai/extract.js';
 import { deleteAttachmentFiles, storeAttachment } from '../case-attachments/storage.js';
 
 interface CaseAttachmentRow {
@@ -18,6 +19,8 @@ interface CaseAttachmentRow {
 // Files uploaded against one case (protest forms, for now — CONTEXT.md
 // section 6, DECISIONS.md D-027). Deliberately not the resources.ts
 // pipeline: no kind/layer/scope, no review gate, no FTS indexing.
+const caseExists = (id: string) => db.prepare('SELECT 1 FROM protest_case WHERE id = ?').get(id) !== undefined;
+
 export function registerCaseAttachmentRoutes(app: FastifyInstance) {
   app.get('/cases/:caseId/attachments', (req) => {
     const { caseId } = req.params as { caseId: string };
@@ -31,6 +34,7 @@ export function registerCaseAttachmentRoutes(app: FastifyInstance) {
 
   app.post('/cases/:caseId/attachments', async (req, reply) => {
     const { caseId } = req.params as { caseId: string };
+    if (!caseExists(caseId)) return reply.code(404).send({ error: 'not found' });
     if (!req.isMultipart()) return reply.code(400).send({ error: 'expected multipart/form-data' });
 
     const parts = req.parts();
@@ -59,6 +63,18 @@ export function registerCaseAttachmentRoutes(app: FastifyInstance) {
       )
       .get(result.lastInsertRowid);
     reply.code(201).send(row);
+  });
+
+  // RF-002: a proposal only. Nothing is saved here; the scribe accepts it from the client.
+  app.post('/cases/:caseId/extract', async (req, reply) => {
+    const { caseId } = req.params as { caseId: string };
+    if (!caseExists(caseId)) return reply.code(404).send({ error: 'not found' });
+    try {
+      return await extractFromAttachments(Number(caseId));
+    } catch (err) {
+      if (err instanceof ExtractError) return reply.code(err.status).send({ error: err.message });
+      throw err;
+    }
   });
 
   app.get('/attachments/:id/file', async (req, reply) => {
